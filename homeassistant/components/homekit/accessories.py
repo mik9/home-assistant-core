@@ -175,6 +175,9 @@ def get_accessory(hass, driver, state, aid, config):  # noqa: C901
         elif (
             device_class == SensorDeviceClass.PM25
             or SensorDeviceClass.PM25 in state.entity_id
+        ) or (
+            device_class == SensorDeviceClass.PM10
+            or SensorDeviceClass.PM10 in state.entity_id
         ):
             a_type = "AirQualitySensor"
         elif device_class == SensorDeviceClass.CO:

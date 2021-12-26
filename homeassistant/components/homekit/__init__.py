@@ -58,6 +58,7 @@ from . import (  # noqa: F401
     type_remotes,
     type_security_systems,
     type_sensors,
+    type_airquality,
     type_switches,
     type_thermostats,
 )
@@ -75,6 +76,7 @@ from .const import (
     CONF_HOMEKIT_MODE,
     CONF_LINKED_BATTERY_CHARGING_SENSOR,
     CONF_LINKED_BATTERY_SENSOR,
+    CONF_LINKED_DENSITY_SENSOR,
     CONF_LINKED_DOORBELL_SENSOR,
     CONF_LINKED_HUMIDITY_SENSOR,
     CONF_LINKED_MOTION_SENSOR,
@@ -670,6 +672,8 @@ class HomeKit:
                 (BINARY_SENSOR_DOMAIN, BinarySensorDeviceClass.OCCUPANCY),
                 (SENSOR_DOMAIN, SensorDeviceClass.BATTERY),
                 (SENSOR_DOMAIN, SensorDeviceClass.HUMIDITY),
+                (SENSOR_DOMAIN, SensorDeviceClass.PM25),
+                (SENSOR_DOMAIN, SensorDeviceClass.PM10),
             }
         )
 
@@ -907,6 +911,19 @@ class HomeKit:
                 self._config.setdefault(state.entity_id, {}).setdefault(
                     CONF_LINKED_HUMIDITY_SENSOR,
                     current_humidity_sensor_entity_id,
+                )
+
+        if state.entity_id.startswith(f"{SENSOR_DOMAIN}."):
+            current_sensor_entity_id = device_lookup[
+                ent_reg_ent.device_id
+            ].get((SENSOR_DOMAIN, SensorDeviceClass.PM10)) or device_lookup[
+                ent_reg_ent.device_id
+            ].get((SENSOR_DOMAIN, SensorDeviceClass.PM25))
+            
+            if current_sensor_entity_id:
+                self._config.setdefault(state.entity_id, {}).setdefault(
+                    CONF_LINKED_DENSITY_SENSOR,
+                    current_sensor_entity_id,
                 )
 
     async def _async_set_device_info_attributes(self, ent_reg_ent, dev_reg, entity_id):

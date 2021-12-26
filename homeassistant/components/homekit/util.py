@@ -42,6 +42,7 @@ from .const import (
     CONF_FEATURE_LIST,
     CONF_LINKED_BATTERY_CHARGING_SENSOR,
     CONF_LINKED_BATTERY_SENSOR,
+    CONF_LINKED_DENSITY_SENSOR,
     CONF_LINKED_DOORBELL_SENSOR,
     CONF_LINKED_HUMIDITY_SENSOR,
     CONF_LINKED_MOTION_SENSOR,
@@ -146,6 +147,9 @@ HUMIDIFIER_SCHEMA = BASIC_INFO_SCHEMA.extend(
     {vol.Optional(CONF_LINKED_HUMIDITY_SENSOR): cv.entity_domain(sensor.DOMAIN)}
 )
 
+SENSOR_SCHEMA = BASIC_INFO_SCHEMA.extend(
+    {vol.Optional(CONF_LINKED_DENSITY_SENSOR): cv.entity_domain(sensor.DOMAIN)}
+)
 
 COVER_SCHEMA = BASIC_INFO_SCHEMA.extend(
     {
@@ -266,6 +270,9 @@ def validate_entity_config(values):
 
         elif domain == "cover":
             config = COVER_SCHEMA(config)
+        
+        elif domain == "sensor":
+            config = SENSOR_SCHEMA(config)
 
         else:
             config = BASIC_INFO_SCHEMA(config)
@@ -384,6 +391,22 @@ def density_to_air_quality(density):
         return 4
     return 5
 
+def density_to_air_quality2(pm25, pm10):
+    """Map PM2.5 and PM10 density to HomeKit AirQuality level."""
+
+    pm25 = pm25 or 0
+    pm10 = pm10 or 0
+
+    if pm25 < 10 and pm10 < 15:
+        return 1
+    elif pm25 < 20 and pm10 < 30:
+        return 2
+    elif pm25 < 30 and pm10 < 50:
+        return 3
+    elif pm25 < 60 and pm10 < 100:
+        return 4
+
+    return 5
 
 def get_persist_filename_for_entry_id(entry_id: str):
     """Determine the filename of the homekit state file."""
