@@ -33,7 +33,8 @@ class AirQualitySensor2(HomeAccessory):
         self.char_map = {}
         
         chars = [self.get_char_name(self.entity_id)]
-        chars.append(self.get_char_name(self.linked_density_sensor))
+        if self.linked_density_sensor:
+            chars.append(self.get_char_name(self.linked_density_sensor))
         
         serv_air_quality = self.add_preload_service(
             SERV_AIR_QUALITY_SENSOR, chars

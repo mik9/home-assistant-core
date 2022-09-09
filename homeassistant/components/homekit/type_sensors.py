@@ -148,38 +148,6 @@ class HumiditySensor(HomeAccessory):
             self.char_humidity.set_value(humidity)
             _LOGGER.debug("%s: Percent set to %d%%", self.entity_id, humidity)
 
-
-@TYPES.register("AirQualitySensor")
-class AirQualitySensor(HomeAccessory):
-    """Generate a AirQualitySensor accessory as air quality sensor."""
-
-    def __init__(self, *args):
-        """Initialize a AirQualitySensor accessory object."""
-        super().__init__(*args, category=CATEGORY_SENSOR)
-        state = self.hass.states.get(self.entity_id)
-        serv_air_quality = self.add_preload_service(
-            SERV_AIR_QUALITY_SENSOR, [CHAR_AIR_PARTICULATE_DENSITY]
-        )
-        self.char_quality = serv_air_quality.configure_char(CHAR_AIR_QUALITY, value=0)
-        self.char_density = serv_air_quality.configure_char(
-            CHAR_AIR_PARTICULATE_DENSITY, value=0
-        )
-        # Set the state so it is in sync on initial
-        # GET to avoid an event storm after homekit startup
-        self.async_update_state(state)
-
-    @callback
-    def async_update_state(self, new_state):
-        """Update accessory after state change."""
-        if (density := convert_to_float(new_state.state)) is not None:
-            if self.char_density.value != density:
-                self.char_density.set_value(density)
-                _LOGGER.debug("%s: Set density to %d", self.entity_id, density)
-            air_quality = density_to_air_quality(density)
-            self.char_quality.set_value(air_quality)
-            _LOGGER.debug("%s: Set air_quality to %d", self.entity_id, air_quality)
-
-
 @TYPES.register("CarbonMonoxideSensor")
 class CarbonMonoxideSensor(HomeAccessory):
     """Generate a CarbonMonoxidSensor accessory as CO sensor."""
