@@ -7,10 +7,13 @@ import re
 import secrets
 import socket
 
+from voluptuous.validators import Number
+from homeassistant.components.modbus import FAN_SCHEMA
+
 import pyqrcode
 import voluptuous as vol
 
-from homeassistant.components import binary_sensor, media_player, sensor
+from homeassistant.components import binary_sensor, media_player, sensor, switch, number
 from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
 from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
 from homeassistant.components.media_player import (
@@ -51,6 +54,10 @@ from .const import (
     CONF_MAX_FPS,
     CONF_MAX_HEIGHT,
     CONF_MAX_WIDTH,
+    CONF_PURIFIER_FILTER_LIFE_LEVEL,
+    CONF_PURIFIER_IGNORED_PRESETS,
+    CONF_PURIFIER_LOCK_PHYSICAL_CONTROLS,
+    CONF_PURIFIER_MOTOR_SPEED,
     CONF_STREAM_ADDRESS,
     CONF_STREAM_COUNT,
     CONF_STREAM_SOURCE,
@@ -149,6 +156,15 @@ HUMIDIFIER_SCHEMA = BASIC_INFO_SCHEMA.extend(
 
 SENSOR_SCHEMA = BASIC_INFO_SCHEMA.extend(
     {vol.Optional(CONF_LINKED_DENSITY_SENSOR): cv.entity_domain(sensor.DOMAIN)}
+)
+
+FAN_SCHEMA = BASIC_INFO_SCHEMA.extend(
+    {
+        vol.Optional(CONF_PURIFIER_LOCK_PHYSICAL_CONTROLS): cv.entity_domain(switch.DOMAIN),
+        vol.Optional(CONF_PURIFIER_FILTER_LIFE_LEVEL): cv.entity_domain(sensor.DOMAIN),
+        vol.Optional(CONF_PURIFIER_MOTOR_SPEED): cv.entity_domain(sensor.DOMAIN),
+        vol.Optional(CONF_PURIFIER_IGNORED_PRESETS): cv.ensure_list,
+    }
 )
 
 COVER_SCHEMA = BASIC_INFO_SCHEMA.extend(
@@ -273,6 +289,9 @@ def validate_entity_config(values):
         
         elif domain == "sensor":
             config = SENSOR_SCHEMA(config)
+
+        elif domain == "fan":
+            config = FAN_SCHEMA(config)
 
         else:
             config = BASIC_INFO_SCHEMA(config)

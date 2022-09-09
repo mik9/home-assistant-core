@@ -139,9 +139,11 @@ def get_accessory(hass, driver, state, aid, config):  # noqa: C901
             # only WindowCovering can handle the covers that are missing
             # SUPPORT_SET_POSITION, SUPPORT_OPEN, and SUPPORT_CLOSE
             a_type = "WindowCovering"
-
     elif state.domain == "fan":
-        a_type = "Fan"
+        if "purifier" in state.entity_id:
+            a_type = "AirPurifier"
+        else:
+            a_type = "Fan"
 
     elif state.domain == "humidifier":
         a_type = "HumidifierDehumidifier"

@@ -20,6 +20,9 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.components.humidifier import DOMAIN as HUMIDIFIER_DOMAIN
 from homeassistant.components.network.const import MDNS_TARGET_IP
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN, SensorDeviceClass
+from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN, SwitchDeviceClass
+from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
+from homeassistant.components.fan import DOMAIN as FAN_DOMAIN
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     ATTR_BATTERY_CHARGING,
@@ -61,6 +64,7 @@ from . import (  # noqa: F401
     type_airquality,
     type_switches,
     type_thermostats,
+    type_purifier
 )
 from .accessories import HomeBridge, HomeDriver, get_accessory
 from .aidmanager import AccessoryAidStorage
@@ -80,6 +84,8 @@ from .const import (
     CONF_LINKED_DOORBELL_SENSOR,
     CONF_LINKED_HUMIDITY_SENSOR,
     CONF_LINKED_MOTION_SENSOR,
+    CONF_PURIFIER_FILTER_LIFE_LEVEL,
+    CONF_PURIFIER_LOCK_PHYSICAL_CONTROLS,
     CONFIG_OPTIONS,
     DEFAULT_EXCLUDE_ACCESSORY_MODE,
     DEFAULT_HOMEKIT_MODE,
@@ -674,6 +680,8 @@ class HomeKit:
                 (SENSOR_DOMAIN, SensorDeviceClass.HUMIDITY),
                 (SENSOR_DOMAIN, SensorDeviceClass.PM25),
                 (SENSOR_DOMAIN, SensorDeviceClass.PM10),
+                (SENSOR_DOMAIN, None),
+                (SWITCH_DOMAIN, SwitchDeviceClass.SWITCH)
             }
         )
 
@@ -925,6 +933,46 @@ class HomeKit:
                     CONF_LINKED_DENSITY_SENSOR,
                     current_sensor_entity_id,
                 )
+
+        # if state.entity_id.startswith(f"{FAN_DOMAIN}."):
+        #     physycal_controls_id = device_lookup[ent_reg_ent.device_id].get(
+        #         (SWITCH_DOMAIN, SwitchDeviceClass.SWITCH)
+        #     )
+
+        #     if physycal_controls_id:
+        #         self._config.setdefault(state.entity_id, {}).setdefault(
+        #             CONF_PURIFIER_LOCK_PHYSICAL_CONTROLS,
+        #             physycal_controls_id
+        #         )
+
+        #     filter_life_level_id = device_lookup[ent_reg_ent.device_id].get(
+        #         (SENSOR_DOMAIN, None)
+        #     )
+
+        #     if filter_life_level_id:
+        #         self._config.setdefault(state.entity_id, {}).setdefault(
+        #             CONF_PURIFIER_FILTER_LIFE_LEVEL,
+        #             filter_life_level_id
+        #         )
+
+        #     fan_level_id = device_lookup[ent_reg_ent.device_id].get(
+        #         (NUMBER_DOMAIN, None)
+        #     )
+        #     if fan_level_id:
+        #         self._config.setdefault(state.entity_id, {}).setdefault(
+        #             CONF_PURIFIER_FAN_LEVEL,
+        #             fan_level_id
+        #         )
+            
+        #     motor_level_id = device_lookup[ent_reg_ent.device_id].get(
+        #         (SENSOR_DOMAIN, None)
+        #     )
+
+        #     if motor_level_id:
+        #         self._config.setdefault(state.entity_id, {}).setdefault(
+        #             CONF_PURIFIER_MOTOR_SPEED,
+        #             motor_level_id
+        #         )
 
     async def _async_set_device_info_attributes(self, ent_reg_ent, dev_reg, entity_id):
         """Set attributes that will be used for homekit device info."""

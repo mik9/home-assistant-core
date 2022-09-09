@@ -39,6 +39,7 @@ from .const import (
     CHAR_ROTATION_DIRECTION,
     CHAR_ROTATION_SPEED,
     CHAR_SWING_MODE,
+    CONF_PURIFIER_IGNORED_PRESETS,
     MAX_NAME_LENGTH,
     PROP_MIN_STEP,
     SERV_FANV2,
@@ -47,9 +48,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-
-@TYPES.register("Fan")
-class Fan(HomeAccessory):
+class BaseFan(HomeAccessory):
     """Generate a Fan accessory for a fan entity.
 
     Currently supports: state, speed, oscillate, direction.
@@ -64,6 +63,7 @@ class Fan(HomeAccessory):
         features = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         percentage_step = state.attributes.get(ATTR_PERCENTAGE_STEP, 1)
         preset_modes = state.attributes.get(ATTR_PRESET_MODES)
+        ignored_presets = self.config.get(CONF_PURIFIER_IGNORED_PRESETS)
 
         if features & SUPPORT_DIRECTION:
             chars.append(CHAR_ROTATION_DIRECTION)
@@ -72,7 +72,7 @@ class Fan(HomeAccessory):
         if features & SUPPORT_SET_SPEED:
             chars.append(CHAR_ROTATION_SPEED)
 
-        serv_fan = self.add_preload_service(SERV_FANV2, chars)
+        serv_fan = self._on_add_service(chars)
         self.set_primary_service(serv_fan)
         self.char_active = serv_fan.configure_char(CHAR_ACTIVE, value=0)
 
@@ -98,6 +98,8 @@ class Fan(HomeAccessory):
 
         if preset_modes:
             for preset_mode in preset_modes:
+                if preset_mode in ignored_presets:
+                    continue
                 preset_serv = self.add_preload_service(SERV_SWITCH, CHAR_NAME)
                 serv_fan.add_linked_service(preset_serv)
                 preset_serv.configure_char(
@@ -117,6 +119,9 @@ class Fan(HomeAccessory):
             self.char_swing = serv_fan.configure_char(CHAR_SWING_MODE, value=0)
         self.async_update_state(state)
         serv_fan.setter_callback = self._set_chars
+
+    def _on_add_service(self, chars):
+        return self.add_preload_service(self.service_type, chars)
 
     def _set_chars(self, char_values):
         _LOGGER.debug("Fan _set_chars: %s", char_values)
@@ -234,3 +239,16 @@ class Fan(HomeAccessory):
         for preset_mode, char in self.preset_mode_chars.items():
             hk_value = 1 if preset_mode == current_preset_mode else 0
             char.set_value(hk_value)
+
+@TYPES.register("Fan")
+class Fan(BaseFan):
+    """Generate a Fan accessory for a fan entity.
+
+    Currently supports: state, speed, oscillate, direction.
+    """
+
+    service_type = SERV_FANV2
+
+    def __init__(self, *args):
+        """Initialize a new Fan accessory object."""
+        super().__init__(*args, category=CATEGORY_FAN)
