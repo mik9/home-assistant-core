@@ -41,7 +41,10 @@ from homeassistant.const import (
     TEMP_FAHRENHEIT,
     UV_INDEX,
 )
+from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
@@ -570,7 +573,12 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+def setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
+) -> None:
     """Set up the Dark Sky sensor."""
     latitude = config.get(CONF_LATITUDE, hass.config.latitude)
     longitude = config.get(CONF_LONGITUDE, hass.config.longitude)
@@ -603,7 +611,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     forecast = config.get(CONF_FORECAST)
     forecast_hour = config.get(CONF_HOURLY_FORECAST)
-    sensors = []
+    sensors: list[SensorEntity] = []
     for variable in config[CONF_MONITORED_CONDITIONS]:
         if variable in DEPRECATED_SENSOR_TYPES:
             _LOGGER.warning("Monitored condition %s is deprecated", variable)
@@ -655,8 +663,7 @@ class DarkSkySensor(SensorEntity):
         self.forecast_data = forecast_data
         self.forecast_day = forecast_day
         self.forecast_hour = forecast_hour
-        self._icon = None
-        self._unit_of_measurement = None
+        self._icon: str | None = None
 
         if forecast_day is not None:
             self._attr_name = f"{name} {description.name} {forecast_day}d"
@@ -666,17 +673,12 @@ class DarkSkySensor(SensorEntity):
             self._attr_name = f"{name} {description.name}"
 
     @property
-    def native_unit_of_measurement(self):
-        """Return the unit of measurement of this entity, if any."""
-        return self._unit_of_measurement
-
-    @property
     def unit_system(self):
         """Return the unit system of this entity."""
         return self.forecast_data.unit_system
 
     @property
-    def entity_picture(self):
+    def entity_picture(self) -> str | None:
         """Return the entity picture to use in the frontend, if any."""
         if self._icon is None or "summary" not in self.entity_description.key:
             return None
@@ -686,13 +688,15 @@ class DarkSkySensor(SensorEntity):
 
         return None
 
-    def update_unit_of_measurement(self):
+    def update_unit_of_measurement(self) -> None:
         """Update units based on unit system."""
         unit_key = MAP_UNIT_SYSTEM.get(self.unit_system, "si_unit")
-        self._unit_of_measurement = getattr(self.entity_description, unit_key)
+        self._attr_native_unit_of_measurement = getattr(
+            self.entity_description, unit_key
+        )
 
     @property
-    def icon(self):
+    def icon(self) -> str | None:
         """Icon to use in the frontend, if any."""
         if (
             "summary" in self.entity_description.key
@@ -702,7 +706,7 @@ class DarkSkySensor(SensorEntity):
 
         return self.entity_description.icon
 
-    def update(self):
+    def update(self) -> None:
         """Get the latest data from Dark Sky and updates the states."""
         # Call the API for new forecast data. Each sensor will re-trigger this
         # same exact call, but that's fine. We cache results for a short period
@@ -817,7 +821,7 @@ class DarkSkyAlertSensor(SensorEntity):
         """Return the state attributes."""
         return self._alerts
 
-    def update(self):
+    def update(self) -> None:
         """Get the latest data from Dark Sky and updates the states."""
         # Call the API for new forecast data. Each sensor will re-trigger this
         # same exact call, but that's fine. We cache results for a short period

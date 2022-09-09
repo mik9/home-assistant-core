@@ -1,6 +1,7 @@
 {
     "device_automation": {
         "condition_type": {
+            "is_apparent_power": "N\u00e5v\u00e6rende tilsynelatende kraft for {entity_name}",
             "is_battery_level": "Gjeldende {entity_name} batteriniv\u00e5",
             "is_carbon_dioxide": "Gjeldende {entity_name} karbondioksidkonsentrasjonsniv\u00e5",
             "is_carbon_monoxide": "Gjeldende {entity_name} karbonmonoksid konsentrasjonsniv\u00e5",
@@ -10,6 +11,7 @@
             "is_gas": "Gjeldende {entity_name} gass",
             "is_humidity": "Gjeldende {entity_name} fuktighet",
             "is_illuminance": "Gjeldende {entity_name} belysningsstyrke",
+            "is_moisture": "Gjeldende {entity_name}",
             "is_nitrogen_dioxide": "Gjeldende konsentrasjonsniv\u00e5 for {entity_name}",
             "is_nitrogen_monoxide": "Gjeldende {entity_name} nitrogenmonoksidkonsentrasjonsniv\u00e5",
             "is_nitrous_oxide": "Gjeldende {entity_name} lystgasskonsentrasjonsniv\u00e5",
@@ -20,6 +22,7 @@
             "is_power": "Gjeldende {entity_name}-effekt",
             "is_power_factor": "Gjeldende {entity_name} effektfaktor",
             "is_pressure": "Gjeldende {entity_name} trykk",
+            "is_reactive_power": "N\u00e5v\u00e6rende reaktiv effekt for {entity_name}",
             "is_signal_strength": "Gjeldende {entity_name} signalstyrke",
             "is_sulphur_dioxide": "Gjeldende konsentrasjonsniv\u00e5 for svoveldioksid for {entity_name}",
             "is_temperature": "Gjeldende {entity_name} temperatur",
@@ -28,6 +31,7 @@
             "is_voltage": "Gjeldende {entity_name} spenning"
         },
         "trigger_type": {
+            "apparent_power": "{entity_name} tilsynelatende kraftendringer",
             "battery_level": "{entity_name} batteriniv\u00e5 endres",
             "carbon_dioxide": "{entity_name} endringer i konsentrasjonen av karbondioksid",
             "carbon_monoxide": "{entity_name} endringer i konsentrasjonen av karbonmonoksid",
@@ -37,6 +41,7 @@
             "gas": "{entity_name} gass endres",
             "humidity": "{entity_name} fuktighets endringer",
             "illuminance": "{entity_name} belysningsstyrke endringer",
+            "moisture": "{entity_name} fuktighetsendringer",
             "nitrogen_dioxide": "{entity_name} nitrogendioksidkonsentrasjonsendringer",
             "nitrogen_monoxide": "{entity_name} nitrogenmonoksidkonsentrasjonsendringer",
             "nitrous_oxide": "{entity_name} endringer i nitrogenoksidskonsentrasjonen",
@@ -47,6 +52,7 @@
             "power": "{entity_name} effektendringer",
             "power_factor": "{entity_name} effektfaktorendringer",
             "pressure": "{entity_name} trykk endringer",
+            "reactive_power": "{entity_name} endringer i reaktiv effekt",
             "signal_strength": "{entity_name} signalstyrkeendringer",
             "sulphur_dioxide": "{entity_name} svoveldioksidkonsentrasjon endres",
             "temperature": "{entity_name} temperaturendringer",

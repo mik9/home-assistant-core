@@ -18,6 +18,7 @@ from homeassistant.const import (
     VOLUME_CUBIC_METERS,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CURRENCY_EUR, DOMAIN, VOLUME_CM3, VOLUME_LMIN
 from .coordinator import ToonDataUpdateCoordinator
@@ -34,7 +35,7 @@ from .models import (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up Toon sensors based on a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -181,6 +182,8 @@ SENSOR_ENTITIES: tuple[ToonSensorEntityDescription, ...] = (
         name="Gas Cost Today",
         section="gas_usage",
         measurement="day_cost",
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=CURRENCY_EUR,
         icon="mdi:gas-cylinder",
         cls=ToonGasMeterDeviceSensor,
@@ -229,6 +232,8 @@ SENSOR_ENTITIES: tuple[ToonSensorEntityDescription, ...] = (
         name="Energy Cost Today",
         section="power_usage",
         measurement="day_cost",
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=CURRENCY_EUR,
         icon="mdi:power-plug",
         cls=ToonElectricityMeterDeviceSensor,
@@ -349,6 +354,8 @@ SENSOR_ENTITIES: tuple[ToonSensorEntityDescription, ...] = (
         name="Water Cost Today",
         section="water_usage",
         measurement="day_cost",
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=CURRENCY_EUR,
         icon="mdi:water-pump",
         entity_registry_enabled_default=False,

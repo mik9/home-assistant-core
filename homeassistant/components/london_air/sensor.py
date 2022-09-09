@@ -1,4 +1,6 @@
 """Sensor for checking the status of London air."""
+from __future__ import annotations
+
 from datetime import timedelta
 from http import HTTPStatus
 import logging
@@ -7,7 +9,10 @@ import requests
 import voluptuous as vol
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
+from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,12 +65,17 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+def setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
+) -> None:
     """Set up the London Air sensor."""
     data = APIData()
     data.update()
     sensors = []
-    for name in config.get(CONF_LOCATIONS):
+    for name in config[CONF_LOCATIONS]:
         sensors.append(AirSensor(name, data))
 
     add_entities(sensors, True)
@@ -131,7 +141,7 @@ class AirSensor(SensorEntity):
         attrs["data"] = self._site_data
         return attrs
 
-    def update(self):
+    def update(self) -> None:
         """Update the sensor."""
         sites_status = []
         self._api_data.update()

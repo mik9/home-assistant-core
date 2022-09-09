@@ -2,7 +2,7 @@
 import asyncio
 from datetime import timedelta
 import logging
-from typing import final
+from typing import Final, TypedDict, final
 
 import voluptuous as vol
 
@@ -13,12 +13,13 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_SOURCE,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.config_validation import make_entity_service_schema
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_component import EntityComponent
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.util.async_ import run_callback_threadsafe
 
 # mypy: allow-untyped-defs, no-check-untyped-defs
@@ -39,7 +40,7 @@ SERVICE_SCAN = "scan"
 EVENT_DETECT_FACE = "image_processing.detect_face"
 
 ATTR_AGE = "age"
-ATTR_CONFIDENCE = "confidence"
+ATTR_CONFIDENCE: Final = "confidence"
 ATTR_FACES = "faces"
 ATTR_GENDER = "gender"
 ATTR_GLASSES = "glasses"
@@ -69,13 +70,25 @@ PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA.extend(
 PLATFORM_SCHEMA_BASE = cv.PLATFORM_SCHEMA_BASE.extend(PLATFORM_SCHEMA.schema)
 
 
-async def async_setup(hass, config):
+class FaceInformation(TypedDict, total=False):
+    """Face information."""
+
+    confidence: float
+    name: str
+    age: float
+    gender: str
+    motion: str
+    glasses: str
+    entity_id: str
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the image processing."""
     component = EntityComponent(_LOGGER, DOMAIN, hass, SCAN_INTERVAL)
 
     await component.async_setup(config)
 
-    async def async_scan_service(service):
+    async def async_scan_service(service: ServiceCall) -> None:
         """Service handler for scan."""
         image_entities = await component.async_extract_from_service(service)
 
@@ -141,9 +154,9 @@ class ImageProcessingEntity(Entity):
 class ImageProcessingFaceEntity(ImageProcessingEntity):
     """Base entity class for face image processing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize base face identify/verify entity."""
-        self.faces = []
+        self.faces: list[FaceInformation] = []
         self.total_faces = 0
 
     @property
@@ -181,14 +194,14 @@ class ImageProcessingFaceEntity(ImageProcessingEntity):
         """Return device specific state attributes."""
         return {ATTR_FACES: self.faces, ATTR_TOTAL_FACES: self.total_faces}
 
-    def process_faces(self, faces, total):
+    def process_faces(self, faces: list[FaceInformation], total: int) -> None:
         """Send event with detected faces and store data."""
         run_callback_threadsafe(
             self.hass.loop, self.async_process_faces, faces, total
         ).result()
 
     @callback
-    def async_process_faces(self, faces, total):
+    def async_process_faces(self, faces: list[FaceInformation], total: int) -> None:
         """Send event with detected faces and store data.
 
         known are a dict in follow format:

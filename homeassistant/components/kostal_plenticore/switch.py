@@ -4,11 +4,12 @@ from __future__ import annotations
 from abc import ABC
 from datetime import timedelta
 import logging
+from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -20,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
-):
+) -> None:
     """Add kostal plenticore Switch."""
     plenticore = hass.data[DOMAIN][entry.entry_id]
 
@@ -69,6 +70,8 @@ async def async_setup_entry(
 
 class PlenticoreDataSwitch(CoordinatorEntity, SwitchEntity, ABC):
     """Representation of a Plenticore Switch."""
+
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(
         self,
@@ -124,7 +127,7 @@ class PlenticoreDataSwitch(CoordinatorEntity, SwitchEntity, ABC):
         self.coordinator.stop_fetch_data(self.module_id, self.data_id)
         await super().async_will_remove_from_hass()
 
-    async def async_turn_on(self, **kwargs) -> None:
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn device on."""
         if await self.coordinator.async_write_data(
             self.module_id, {self.data_id: self.on_value}
@@ -132,7 +135,7 @@ class PlenticoreDataSwitch(CoordinatorEntity, SwitchEntity, ABC):
             self.coordinator.name = f"{self.platform_name} {self._name} {self.on_label}"
             await self.coordinator.async_request_refresh()
 
-    async def async_turn_off(self, **kwargs) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn device off."""
         if await self.coordinator.async_write_data(
             self.module_id, {self.data_id: self.off_value}

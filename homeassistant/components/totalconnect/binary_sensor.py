@@ -3,11 +3,16 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 
 
-async def async_setup_entry(hass, entry, async_add_entities) -> None:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up TotalConnect device sensors based on a config entry."""
     sensors = []
 
@@ -44,7 +49,7 @@ class TotalConnectBinarySensor(BinarySensorEntity):
         """Return the name of the device."""
         return self._name
 
-    def update(self):
+    def update(self) -> None:
         """Return the state of the device."""
         self._is_tampered = self._zone.is_tampered()
         self._is_low_battery = self._zone.is_low_battery()

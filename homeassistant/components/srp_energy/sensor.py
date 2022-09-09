@@ -10,7 +10,10 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ATTRIBUTION, ENERGY_KILO_WATT_HOUR
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -26,7 +29,9 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up the SRP Energy Usage sensor."""
     # API object stored here by __init__.py
     is_time_of_use = False
@@ -78,6 +83,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class SrpEntity(SensorEntity):
     """Implementation of a Srp Energy Usage sensor."""
 
+    _attr_should_poll = False
+
     def __init__(self, coordinator):
         """Initialize the SrpEntity class."""
         self._name = SENSOR_NAME
@@ -121,11 +128,6 @@ class SrpEntity(SensorEntity):
         return None
 
     @property
-    def should_poll(self):
-        """No need to poll. Coordinator notifies entity of updates."""
-        return False
-
-    @property
     def extra_state_attributes(self):
         """Return the state attributes."""
         if not self.coordinator.data:
@@ -151,7 +153,7 @@ class SrpEntity(SensorEntity):
         """Return the state class."""
         return SensorStateClass.TOTAL_INCREASING
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
@@ -159,7 +161,7 @@ class SrpEntity(SensorEntity):
         if self.coordinator.data:
             self._state = self.coordinator.data
 
-    async def async_update(self):
+    async def async_update(self) -> None:
         """Update the entity.
 
         Only used by the generic entity update service.

@@ -8,6 +8,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DATA,
@@ -52,14 +53,14 @@ ZONE_SENSORS = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
-):
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up the Tado sensor platform."""
 
     tado = hass.data[DOMAIN][entry.entry_id][DATA]
     devices = tado.devices
     zones = tado.zones
-    entities = []
+    entities: list[BinarySensorEntity] = []
 
     # Create device sensors
     for device in devices:
@@ -107,7 +108,7 @@ class TadoDeviceBinarySensor(TadoDeviceEntity, BinarySensorEntity):
 
         self._state = None
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""
 
         self.async_on_remove(
@@ -183,7 +184,7 @@ class TadoZoneBinarySensor(TadoZoneEntity, BinarySensorEntity):
         self._state_attributes = None
         self._tado_zone_data = None
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""
 
         self.async_on_remove(

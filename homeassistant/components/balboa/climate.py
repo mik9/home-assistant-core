@@ -2,22 +2,19 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
-    CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_IDLE,
     FAN_HIGH,
     FAN_LOW,
     FAN_MEDIUM,
     FAN_OFF,
-    HVAC_MODE_AUTO,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_OFF,
-    SUPPORT_FAN_MODE,
-    SUPPORT_PRESET_MODE,
-    SUPPORT_TARGET_TEMPERATURE,
+    ClimateEntityFeature,
+    HVACAction,
+    HVACMode,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_TEMPERATURE,
     PRECISION_HALVES,
@@ -25,6 +22,8 @@ from homeassistant.const import (
     TEMP_CELSIUS,
     TEMP_FAHRENHEIT,
 )
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CLIMATE, CLIMATE_SUPPORTED_FANSTATES, CLIMATE_SUPPORTED_MODES, DOMAIN
 from .entity import BalboaEntity
@@ -32,7 +31,9 @@ from .entity import BalboaEntity
 SET_TEMPERATURE_WAIT = 1
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up the spa climate device."""
     async_add_entities(
         [
@@ -65,18 +66,20 @@ class BalboaSpaClimate(BalboaEntity, ClimateEntity):
             value: key for key, value in self._balboa_to_ha_blower_map.items()
         }
         self._balboa_to_ha_heatmode_map = {
-            self._client.HEATMODE_READY: HVAC_MODE_HEAT,
-            self._client.HEATMODE_RNR: HVAC_MODE_AUTO,
-            self._client.HEATMODE_REST: HVAC_MODE_OFF,
+            self._client.HEATMODE_READY: HVACMode.HEAT,
+            self._client.HEATMODE_RNR: HVACMode.AUTO,
+            self._client.HEATMODE_REST: HVACMode.OFF,
         }
         self._ha_heatmode_to_balboa_map = {
             value: key for key, value in self._balboa_to_ha_heatmode_map.items()
         }
         scale = self._client.get_tempscale()
         self._attr_preset_modes = self._client.get_heatmode_stringlist()
-        self._attr_supported_features = SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
+        self._attr_supported_features = (
+            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
+        )
         if self._client.have_blower():
-            self._attr_supported_features |= SUPPORT_FAN_MODE
+            self._attr_supported_features |= ClimateEntityFeature.FAN_MODE
         self._attr_min_temp = self._client.tmin[self._client.TEMPRANGE_LOW][scale]
         self._attr_max_temp = self._client.tmax[self._client.TEMPRANGE_HIGH][scale]
         self._attr_temperature_unit = TEMP_FAHRENHEIT
@@ -94,10 +97,9 @@ class BalboaSpaClimate(BalboaEntity, ClimateEntity):
     @property
     def hvac_action(self) -> str:
         """Return the current operation mode."""
-        state = self._client.get_heatstate()
-        if state >= self._client.ON:
-            return CURRENT_HVAC_HEAT
-        return CURRENT_HVAC_IDLE
+        if self._client.get_heatstate() >= self._client.ON:
+            return HVACAction.HEATING
+        return HVACAction.IDLE
 
     @property
     def fan_mode(self) -> str:
@@ -120,7 +122,7 @@ class BalboaSpaClimate(BalboaEntity, ClimateEntity):
         """Return current preset mode."""
         return self._client.get_heatmode(True)
 
-    async def async_set_temperature(self, **kwargs):
+    async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set a new target temperature."""
         scale = self._client.get_tempscale()
         newtemp = kwargs[ATTR_TEMPERATURE]
@@ -132,7 +134,7 @@ class BalboaSpaClimate(BalboaEntity, ClimateEntity):
             await asyncio.sleep(SET_TEMPERATURE_WAIT)
         await self._client.send_temp_change(newtemp)
 
-    async def async_set_preset_mode(self, preset_mode) -> None:
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
         modelist = self._client.get_heatmode_stringlist()
         self._async_validate_mode_or_raise(preset_mode)
@@ -140,7 +142,7 @@ class BalboaSpaClimate(BalboaEntity, ClimateEntity):
             raise ValueError(f"{preset_mode} is not a valid preset mode")
         await self._client.change_heatmode(modelist.index(preset_mode))
 
-    async def async_set_fan_mode(self, fan_mode):
+    async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new fan mode."""
         await self._client.change_blower(self._ha_to_balboa_blower_map[fan_mode])
 
@@ -149,7 +151,7 @@ class BalboaSpaClimate(BalboaEntity, ClimateEntity):
         if mode == self._client.HEATMODE_RNR:
             raise ValueError(f"{mode} can only be reported but not set")
 
-    async def async_set_hvac_mode(self, hvac_mode):
+    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode.
 
         OFF = Rest

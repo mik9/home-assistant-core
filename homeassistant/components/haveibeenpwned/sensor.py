@@ -1,4 +1,6 @@
 """Support for haveibeenpwned (email breaches) sensor."""
+from __future__ import annotations
+
 from datetime import timedelta
 from http import HTTPStatus
 import logging
@@ -9,8 +11,11 @@ import voluptuous as vol
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.const import ATTR_ATTRIBUTION, CONF_API_KEY, CONF_EMAIL
+from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import track_point_in_time
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import Throttle
 import homeassistant.util.dt as dt_util
 
@@ -35,9 +40,14 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+def setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
+) -> None:
     """Set up the HaveIBeenPwned sensor."""
-    emails = config.get(CONF_EMAIL)
+    emails = config[CONF_EMAIL]
     api_key = config[CONF_API_KEY]
     data = HaveIBeenPwnedData(emails, api_key)
 
@@ -90,7 +100,7 @@ class HaveIBeenPwnedSensor(SensorEntity):
 
         return val
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Get initial data."""
         # To make sure we get initial data for the sensors ignoring the normal
         # throttle of 15 minutes but using an update throttle of 5 seconds
@@ -116,7 +126,7 @@ class HaveIBeenPwnedSensor(SensorEntity):
         self._state = len(self._data.data[self._email])
         self.schedule_update_ha_state()
 
-    def update(self):
+    def update(self) -> None:
         """Update data and see if it contains data for our email."""
         self._data.update()
 

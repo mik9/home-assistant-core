@@ -12,7 +12,10 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
 )
 from homeassistant.const import CONF_MONITORED_CONDITIONS
+from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN as ZONEMINDER_DOMAIN
 
@@ -59,12 +62,17 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+def setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
+) -> None:
     """Set up the ZoneMinder sensor platform."""
     include_archived = config[CONF_INCLUDE_ARCHIVED]
     monitored_conditions = config[CONF_MONITORED_CONDITIONS]
 
-    sensors = []
+    sensors: list[SensorEntity] = []
     for zm_client in hass.data[ZONEMINDER_DOMAIN].values():
         if not (monitors := zm_client.get_monitors()):
             _LOGGER.warning("Could not fetch any monitors from ZoneMinder")
@@ -108,7 +116,7 @@ class ZMSensorMonitors(SensorEntity):
         """Return True if Monitor is available."""
         return self._is_available
 
-    def update(self):
+    def update(self) -> None:
         """Update the sensor."""
         if not (state := self._monitor.function):
             self._state = None
@@ -135,7 +143,7 @@ class ZMSensorEvents(SensorEntity):
         """Return the name of the sensor."""
         return f"{self._monitor.name} {self.time_period.title}"
 
-    def update(self):
+    def update(self) -> None:
         """Update the sensor."""
         self._attr_native_value = self._monitor.get_events(
             self.time_period, self._include_archived
@@ -166,7 +174,7 @@ class ZMSensorRunState(SensorEntity):
         """Return True if ZoneMinder is available."""
         return self._is_available
 
-    def update(self):
+    def update(self) -> None:
         """Update the sensor."""
         self._state = self._client.get_active_state()
         self._is_available = self._client.is_available

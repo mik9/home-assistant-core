@@ -12,11 +12,11 @@
             "user": {
                 "data": {
                     "client_id": "Kunci API",
-                    "name": "Nama",
+                    "heating_type": "Jenis pemanasan",
                     "password": "Kata Sandi",
                     "username": "Email"
                 },
-                "title": "{name}"
+                "description": "Siapkan integrasi ViCare. Untuk menghasilkan kunci API, buka https://developer.viessmann.com"
             }
         }
     }

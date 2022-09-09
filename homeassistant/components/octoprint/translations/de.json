@@ -12,7 +12,7 @@
         },
         "flow_title": "OctoPrint-Drucker: {host}",
         "progress": {
-            "get_api_key": "\u00d6ffne die OctoPrint-Benutzeroberfl\u00e4che und klicke bei der Zugriffsanfrage f\u00fcr \"Home Assistant\" auf \"Zulassen\"."
+            "get_api_key": "\u00d6ffne die OctoPrint-Benutzeroberfl\u00e4che und dr\u00fccke bei der Zugriffsanfrage f\u00fcr \"Home Assistant\" auf \"Zulassen\"."
         },
         "step": {
             "user": {
@@ -21,7 +21,8 @@
                     "path": "Anwendungspfad",
                     "port": "Port-Nummer",
                     "ssl": "SSL verwenden",
-                    "username": "Benutzername"
+                    "username": "Benutzername",
+                    "verify_ssl": "SSL-Zertifikat \u00fcberpr\u00fcfen"
                 }
             }
         }

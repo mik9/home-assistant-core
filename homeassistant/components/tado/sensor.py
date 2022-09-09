@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, TEMP_CELSIUS
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     CONDITIONS_MAP,
@@ -56,13 +57,13 @@ def format_condition(condition: str) -> str:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
-):
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up the Tado sensor platform."""
 
     tado = hass.data[DOMAIN][entry.entry_id][DATA]
     zones = tado.zones
-    entities = []
+    entities: list[SensorEntity] = []
 
     # Create home sensors
     entities.extend([TadoHomeSensor(tado, variable) for variable in HOME_SENSORS])
@@ -101,7 +102,7 @@ class TadoHomeSensor(TadoHomeEntity, SensorEntity):
         self._state_attributes = None
         self._tado_weather_data = self._tado.data["weather"]
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""
 
         self.async_on_remove(
@@ -210,7 +211,7 @@ class TadoZoneSensor(TadoZoneEntity, SensorEntity):
         self._state_attributes = None
         self._tado_zone_data = None
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Register for sensor updates."""
 
         self.async_on_remove(

@@ -1,4 +1,6 @@
 """A sensor that monitors trends in other components."""
+from __future__ import annotations
+
 from collections import deque
 import logging
 import math
@@ -23,12 +25,14 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import generate_entity_id
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.reload import setup_reload_service
-from homeassistant.util import utcnow
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.util.dt import utcnow
 
 from . import DOMAIN, PLATFORMS
 
@@ -64,7 +68,12 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+def setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
+) -> None:
     """Set up the trend sensors."""
     setup_reload_service(hass, DOMAIN, PLATFORMS)
 
@@ -102,6 +111,8 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
 class SensorTrend(BinarySensorEntity):
     """Representation of a trend Sensor."""
+
+    _attr_should_poll = False
 
     def __init__(
         self,
@@ -158,12 +169,7 @@ class SensorTrend(BinarySensorEntity):
             ATTR_SAMPLE_DURATION: self._sample_duration,
         }
 
-    @property
-    def should_poll(self):
-        """No polling needed."""
-        return False
-
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Complete device setup after being added to hass."""
 
         @callback
@@ -189,7 +195,7 @@ class SensorTrend(BinarySensorEntity):
             )
         )
 
-    async def async_update(self):
+    async def async_update(self) -> None:
         """Get the latest data and update the states."""
         # Remove outdated samples
         if self._sample_duration > 0:

@@ -5,6 +5,7 @@ Call init before using it in your tests to ensure clean test data.
 """
 from homeassistant.components.sensor import (
     DEVICE_CLASSES,
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
 )
@@ -31,6 +32,7 @@ UNITS_OF_MEASUREMENT = {
     SensorDeviceClass.CO2: CONCENTRATION_PARTS_PER_MILLION,  # ppm of CO2 concentration
     SensorDeviceClass.HUMIDITY: PERCENTAGE,  # % of humidity in the air
     SensorDeviceClass.ILLUMINANCE: "lm",  # current light level (lx/lm)
+    SensorDeviceClass.MOISTURE: PERCENTAGE,  # % of water in a substance
     SensorDeviceClass.NITROGEN_DIOXIDE: CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,  # µg/m³ of nitrogen dioxide
     SensorDeviceClass.NITROGEN_MONOXIDE: CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,  # µg/m³ of nitrogen monoxide
     SensorDeviceClass.NITROUS_OXIDE: CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,  # µg/m³ of nitrogen oxide
@@ -109,3 +111,17 @@ class MockSensor(MockEntity, SensorEntity):
     def state_class(self):
         """Return the state class of this sensor."""
         return self._handle("state_class")
+
+
+class MockRestoreSensor(MockSensor, RestoreSensor):
+    """Mock RestoreSensor class."""
+
+    async def async_added_to_hass(self) -> None:
+        """Restore native_value and native_unit_of_measurement."""
+        await super().async_added_to_hass()
+        if (last_sensor_data := await self.async_get_last_sensor_data()) is None:
+            return
+        self._values["native_value"] = last_sensor_data.native_value
+        self._values[
+            "native_unit_of_measurement"
+        ] = last_sensor_data.native_unit_of_measurement
