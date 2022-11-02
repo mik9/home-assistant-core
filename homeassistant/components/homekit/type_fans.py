@@ -108,7 +108,9 @@ class BaseFan(HomeAccessory):
             for preset_mode in self.preset_modes:
                 if preset_mode in ignored_presets:
                     continue
-                preset_serv = self.add_preload_service(SERV_SWITCH, CHAR_NAME)
+                preset_serv = self.add_preload_service(
+                    SERV_SWITCH, CHAR_NAME, unique_id=preset_mode
+                )
                 serv_fan.add_linked_service(preset_serv)
                 preset_serv.configure_char(
                     CHAR_NAME,
