@@ -23,7 +23,6 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
-    CONF_STATISTICS_ONLY,
     DEFAULT_LOCATION,
     DEFAULT_NAME,
     DEFAULT_SSL,
@@ -56,7 +55,6 @@ class PiHoleFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_LOCATION: user_input[CONF_LOCATION],
                 CONF_SSL: user_input[CONF_SSL],
                 CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
-                CONF_API_KEY: user_input[CONF_API_KEY],
             }
 
             self._async_abort_entries_match(
@@ -71,6 +69,9 @@ class PiHoleFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     title=user_input[CONF_NAME], data=self._config
                 )
 
+            if CONF_API_KEY in errors:
+                return await self.async_step_api_key()
+
         user_input = user_input or {}
         return self.async_show_form(
             step_id="user",
@@ -80,7 +81,6 @@ class PiHoleFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(
                         CONF_PORT, default=user_input.get(CONF_PORT, 80)
                     ): vol.Coerce(int),
-                    vol.Required(CONF_API_KEY): str,
                     vol.Required(
                         CONF_NAME, default=user_input.get(CONF_NAME, DEFAULT_NAME)
                     ): str,
@@ -101,40 +101,23 @@ class PiHoleFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_import(self, user_input: dict[str, Any]) -> FlowResult:
-        """Handle a flow initiated by import."""
+    async def async_step_api_key(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle step to setup API key."""
+        errors = {}
+        if user_input is not None:
+            self._config[CONF_API_KEY] = user_input[CONF_API_KEY]
+            if not (errors := await self._async_try_connect()):
+                return self.async_create_entry(
+                    title=self._config[CONF_NAME],
+                    data=self._config,
+                )
 
-        host = user_input[CONF_HOST]
-        name = user_input[CONF_NAME]
-        location = user_input[CONF_LOCATION]
-        tls = user_input[CONF_SSL]
-        verify_tls = user_input[CONF_VERIFY_SSL]
-        endpoint = f"{host}/{location}"
-
-        if await self._async_endpoint_existed(endpoint):
-            return self.async_abort(reason="already_configured")
-
-        try:
-            await self._async_try_connect_legacy(host, location, tls, verify_tls)
-        except HoleError as ex:
-            _LOGGER.debug("Connection failed: %s", ex)
-            _LOGGER.error("Failed to import: %s", ex)
-            return self.async_abort(reason="cannot_connect")
-        self._config = {
-            CONF_HOST: host,
-            CONF_NAME: name,
-            CONF_LOCATION: location,
-            CONF_SSL: tls,
-            CONF_VERIFY_SSL: verify_tls,
-        }
-        api_key = user_input.get(CONF_API_KEY)
-        return self.async_create_entry(
-            title=name,
-            data={
-                **self._config,
-                CONF_STATISTICS_ONLY: api_key is None,
-                CONF_API_KEY: api_key,
-            },
+        return self.async_show_form(
+            step_id="api_key",
+            data_schema=vol.Schema({vol.Required(CONF_API_KEY): str}),
+            errors=errors,
         )
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
@@ -178,7 +161,7 @@ class PiHoleFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             session,
             location=self._config[CONF_LOCATION],
             tls=self._config[CONF_SSL],
-            api_token=self._config[CONF_API_KEY],
+            api_token=self._config.get(CONF_API_KEY),
         )
         try:
             await pi_hole.get_data()
@@ -188,17 +171,3 @@ class PiHoleFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not isinstance(pi_hole.data, dict):
             return {CONF_API_KEY: "invalid_auth"}
         return {}
-
-    async def _async_endpoint_existed(self, endpoint: str) -> bool:
-        existing_endpoints = [
-            f"{entry.data.get(CONF_HOST)}/{entry.data.get(CONF_LOCATION)}"
-            for entry in self._async_current_entries()
-        ]
-        return endpoint in existing_endpoints
-
-    async def _async_try_connect_legacy(
-        self, host: str, location: str, tls: bool, verify_tls: bool
-    ) -> None:
-        session = async_get_clientsession(self.hass, verify_tls)
-        pi_hole = Hole(host, session, location=location, tls=tls)
-        await pi_hole.get_data()
