@@ -1,10 +1,12 @@
 """SQLAlchemy util functions."""
 from __future__ import annotations
 
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterable, Sequence
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 import functools
+from functools import partial
+from itertools import islice
 import logging
 import os
 import time
@@ -16,9 +18,9 @@ from awesomeversion import (
     AwesomeVersionStrategy,
 )
 import ciso8601
-from sqlalchemy import text
-from sqlalchemy.engine.cursor import CursorFetchStrategy
-from sqlalchemy.engine.row import Row
+from sqlalchemy import inspect, text
+from sqlalchemy.engine import Result, Row
+from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
@@ -45,6 +47,8 @@ from .models import (
 )
 
 if TYPE_CHECKING:
+    from sqlite3.dbapi2 import Cursor as SQLiteCursor
+
     from . import Recorder
 
 _RecorderT = TypeVar("_RecorderT", bound="Recorder")
@@ -107,8 +111,14 @@ def session_scope(
     hass: HomeAssistant | None = None,
     session: Session | None = None,
     exception_filter: Callable[[Exception], bool] | None = None,
+    read_only: bool = False,
 ) -> Generator[Session, None, None]:
-    """Provide a transactional scope around a series of operations."""
+    """Provide a transactional scope around a series of operations.
+
+    read_only is used to indicate that the session is only used for reading
+    data and that no commit is required. It does not prevent the session
+    from writing and is not a security measure.
+    """
     if session is None and hass is not None:
         session = get_instance(hass).get_session()
 
@@ -118,34 +128,17 @@ def session_scope(
     need_rollback = False
     try:
         yield session
-        if session.get_transaction():
+        if session.get_transaction() and not read_only:
             need_rollback = True
             session.commit()
     except Exception as err:  # pylint: disable=broad-except
-        _LOGGER.error("Error executing query: %s", err)
+        _LOGGER.error("Error executing query: %s", err, exc_info=True)
         if need_rollback:
             session.rollback()
         if not exception_filter or not exception_filter(err):
             raise
     finally:
         session.close()
-
-
-def commit(session: Session, work: Any) -> bool:
-    """Commit & retry work: Either a model or in a function."""
-    for _ in range(0, RETRIES):
-        try:
-            if callable(work):
-                work(session)
-            else:
-                session.add(work)
-            session.commit()
-            return True
-        except OperationalError as err:
-            _LOGGER.error("Error executing query: %s", err)
-            session.rollback()
-            time.sleep(QUERY_RETRY_WAIT)
-    return False
 
 
 def execute(
@@ -155,9 +148,12 @@ def execute(
 
     This method also retries a few times in the case of stale connections.
     """
+    debug = _LOGGER.isEnabledFor(logging.DEBUG)
     for tryno in range(0, RETRIES):
         try:
-            timer_start = time.perf_counter()
+            if debug:
+                timer_start = time.perf_counter()
+
             if to_native:
                 result = [
                     row
@@ -170,7 +166,7 @@ def execute(
             else:
                 result = qry.all()
 
-            if _LOGGER.isEnabledFor(logging.DEBUG):
+            if debug:
                 elapsed = time.perf_counter() - timer_start
                 if to_native:
                     _LOGGER.debug(
@@ -193,7 +189,8 @@ def execute(
                 raise
             time.sleep(QUERY_RETRY_WAIT)
 
-    assert False  # unreachable # pragma: no cover
+    # Unreachable
+    raise RuntimeError  # pragma: no cover
 
 
 def execute_stmt_lambda_element(
@@ -201,8 +198,9 @@ def execute_stmt_lambda_element(
     stmt: StatementLambdaElement,
     start_time: datetime | None = None,
     end_time: datetime | None = None,
-    yield_per: int | None = DEFAULT_YIELD_STATES_ROWS,
-) -> list[Row]:
+    yield_per: int = DEFAULT_YIELD_STATES_ROWS,
+    orm_rows: bool = True,
+) -> Sequence[Row] | Result:
     """Execute a StatementLambdaElement.
 
     If the time window passed is greater than one day
@@ -214,20 +212,24 @@ def execute_stmt_lambda_element(
     specific entities) since they are usually faster
     with .all().
     """
-    executed = session.execute(stmt)
     use_all = not start_time or ((end_time or dt_util.utcnow()) - start_time).days <= 1
     for tryno in range(RETRIES):
         try:
+            if orm_rows:
+                executed = session.execute(stmt)
+            else:
+                executed = session.connection().execute(stmt)
             if use_all:
-                return executed.all()  # type: ignore[no-any-return]
-            return executed.yield_per(yield_per)  # type: ignore[no-any-return]
+                return executed.all()
+            return executed.yield_per(yield_per)
         except SQLAlchemyError as err:
             _LOGGER.error("Error executing query: %s", err)
             if tryno == RETRIES - 1:
                 raise
             time.sleep(QUERY_RETRY_WAIT)
 
-    assert False  # unreachable # pragma: no cover
+    # Unreachable
+    raise RuntimeError  # pragma: no cover
 
 
 def validate_or_move_away_sqlite_database(dburl: str) -> bool:
@@ -250,7 +252,7 @@ def dburl_to_path(dburl: str) -> str:
     return dburl.removeprefix(SQLITE_URL_PREFIX)
 
 
-def last_run_was_recently_clean(cursor: CursorFetchStrategy) -> bool:
+def last_run_was_recently_clean(cursor: SQLiteCursor) -> bool:
     """Verify the last recorder run was recently clean."""
 
     cursor.execute("SELECT end FROM recorder_runs ORDER BY start DESC LIMIT 1;")
@@ -271,7 +273,7 @@ def last_run_was_recently_clean(cursor: CursorFetchStrategy) -> bool:
     return True
 
 
-def basic_sanity_check(cursor: CursorFetchStrategy) -> bool:
+def basic_sanity_check(cursor: SQLiteCursor) -> bool:
     """Check tables to make sure select does not fail."""
 
     for table in TABLES_TO_CHECK:
@@ -298,7 +300,7 @@ def validate_sqlite_database(dbpath: str) -> bool:
     return True
 
 
-def run_checks_on_open_db(dbpath: str, cursor: CursorFetchStrategy) -> None:
+def run_checks_on_open_db(dbpath: str, cursor: SQLiteCursor) -> None:
     """Run checks that will generate a sqlite3 exception if there is corruption."""
     sanity_check_passed = basic_sanity_check(cursor)
     last_run_was_clean = last_run_was_recently_clean(cursor)
@@ -347,14 +349,14 @@ def move_away_broken_database(dbfile: str) -> None:
         os.rename(path, f"{path}{corrupt_postfix}")
 
 
-def execute_on_connection(dbapi_connection: Any, statement: str) -> None:
+def execute_on_connection(dbapi_connection: DBAPIConnection, statement: str) -> None:
     """Execute a single statement with a dbapi connection."""
     cursor = dbapi_connection.cursor()
     cursor.execute(statement)
     cursor.close()
 
 
-def query_on_connection(dbapi_connection: Any, statement: str) -> Any:
+def query_on_connection(dbapi_connection: DBAPIConnection, statement: str) -> Any:
     """Execute a single statement with a dbapi connection and return the result."""
     cursor = dbapi_connection.cursor()
     cursor.execute(statement)
@@ -460,19 +462,18 @@ def _async_create_mariadb_range_index_regression_issue(
 def setup_connection_for_dialect(
     instance: Recorder,
     dialect_name: str,
-    dbapi_connection: Any,
+    dbapi_connection: DBAPIConnection,
     first_connection: bool,
 ) -> DatabaseEngine | None:
     """Execute statements needed for dialect connection."""
     version: AwesomeVersion | None = None
-    slow_range_in_select = True
+    slow_range_in_select = False
     if dialect_name == SupportedDialect.SQLITE:
-        slow_range_in_select = False
         if first_connection:
-            old_isolation = dbapi_connection.isolation_level
-            dbapi_connection.isolation_level = None
+            old_isolation = dbapi_connection.isolation_level  # type: ignore[attr-defined]
+            dbapi_connection.isolation_level = None  # type: ignore[attr-defined]
             execute_on_connection(dbapi_connection, "PRAGMA journal_mode=WAL")
-            dbapi_connection.isolation_level = old_isolation
+            dbapi_connection.isolation_level = old_isolation  # type: ignore[attr-defined]
             # WAL mode only needs to be setup once
             # instead of every time we open the sqlite connection
             # as its persistent and isn't free to call every time.
@@ -540,12 +541,10 @@ def setup_connection_for_dialect(
                 or MARIA_DB_107 <= version < MARIADB_WITH_FIXED_IN_QUERIES_107
                 or MARIA_DB_108 <= version < MARIADB_WITH_FIXED_IN_QUERIES_108
             )
+
+        # Ensure all times are using UTC to avoid issues with daylight savings
+        execute_on_connection(dbapi_connection, "SET time_zone = '+00:00'")
     elif dialect_name == SupportedDialect.POSTGRESQL:
-        # Historically we have marked PostgreSQL as having slow range in select
-        # but this may not be true for all versions. We should investigate
-        # this further when we have more data and remove this if possible
-        # in the future so we can use the simpler purge SQL query for
-        # _select_unused_attributes_ids and _select_unused_events_ids
         if first_connection:
             # server_version_num was added in 2006
             result = query_on_connection(dbapi_connection, "SHOW server_version")
@@ -580,31 +579,36 @@ def end_incomplete_runs(session: Session, start_time: datetime) -> None:
         session.add(run)
 
 
+def _is_retryable_error(instance: Recorder, err: OperationalError) -> bool:
+    """Return True if the error is retryable."""
+    assert instance.engine is not None
+    return bool(
+        instance.engine.dialect.name == SupportedDialect.MYSQL
+        and isinstance(err.orig, BaseException)
+        and err.orig.args
+        and err.orig.args[0] in RETRYABLE_MYSQL_ERRORS
+    )
+
+
+_FuncType = Callable[Concatenate[_RecorderT, _P], bool]
+
+
 def retryable_database_job(
     description: str,
-) -> Callable[
-    [Callable[Concatenate[_RecorderT, _P], bool]],
-    Callable[Concatenate[_RecorderT, _P], bool],
-]:
+) -> Callable[[_FuncType[_RecorderT, _P]], _FuncType[_RecorderT, _P]]:
     """Try to execute a database job.
 
     The job should return True if it finished, and False if it needs to be rescheduled.
     """
 
-    def decorator(
-        job: Callable[Concatenate[_RecorderT, _P], bool]
-    ) -> Callable[Concatenate[_RecorderT, _P], bool]:
+    def decorator(job: _FuncType[_RecorderT, _P]) -> _FuncType[_RecorderT, _P]:
         @functools.wraps(job)
         def wrapper(instance: _RecorderT, *args: _P.args, **kwargs: _P.kwargs) -> bool:
             try:
                 return job(instance, *args, **kwargs)
             except OperationalError as err:
-                assert instance.engine is not None
-                if (
-                    instance.engine.dialect.name == SupportedDialect.MYSQL
-                    and err.orig
-                    and err.orig.args[0] in RETRYABLE_MYSQL_ERRORS
-                ):
+                if _is_retryable_error(instance, err):
+                    assert isinstance(err.orig, BaseException)
                     _LOGGER.info(
                         "%s; %s not completed, retrying", err.orig.args[1], description
                     )
@@ -622,6 +626,46 @@ def retryable_database_job(
     return decorator
 
 
+_WrappedFuncType = Callable[Concatenate[_RecorderT, _P], None]
+
+
+def database_job_retry_wrapper(
+    description: str, attempts: int = 5
+) -> Callable[[_WrappedFuncType[_RecorderT, _P]], _WrappedFuncType[_RecorderT, _P]]:
+    """Try to execute a database job multiple times.
+
+    This wrapper handles InnoDB deadlocks and lock timeouts.
+
+    This is different from retryable_database_job in that it will retry the job
+    attempts number of times instead of returning False if the job fails.
+    """
+
+    def decorator(
+        job: _WrappedFuncType[_RecorderT, _P]
+    ) -> _WrappedFuncType[_RecorderT, _P]:
+        @functools.wraps(job)
+        def wrapper(instance: _RecorderT, *args: _P.args, **kwargs: _P.kwargs) -> None:
+            for attempt in range(attempts):
+                try:
+                    job(instance, *args, **kwargs)
+                    return
+                except OperationalError as err:
+                    if attempt == attempts - 1 or not _is_retryable_error(
+                        instance, err
+                    ):
+                        raise
+                    assert isinstance(err.orig, BaseException)
+                    _LOGGER.info(
+                        "%s; %s failed, retrying", err.orig.args[1], description
+                    )
+                    time.sleep(instance.db_retry_wait)
+                    # Failed with retryable error
+
+        return wrapper
+
+    return decorator
+
+
 def periodic_db_cleanups(instance: Recorder) -> None:
     """Run any database cleanups that need to happen periodically.
 
@@ -633,6 +677,7 @@ def periodic_db_cleanups(instance: Recorder) -> None:
         _LOGGER.debug("WAL checkpoint")
         with instance.engine.connect() as connection:
             connection.execute(text("PRAGMA wal_checkpoint(TRUNCATE);"))
+            connection.execute(text("PRAGMA OPTIMIZE;"))
 
 
 @contextmanager
@@ -777,3 +822,38 @@ def resolve_period(
             end_time += offset
 
     return (start_time, end_time)
+
+
+def take(take_num: int, iterable: Iterable) -> list[Any]:
+    """Return first n items of the iterable as a list.
+
+    From itertools recipes
+    """
+    return list(islice(iterable, take_num))
+
+
+def chunked(iterable: Iterable, chunked_num: int) -> Iterable[Any]:
+    """Break *iterable* into lists of length *n*.
+
+    From more-itertools
+    """
+    return iter(partial(take, chunked_num, iter(iterable)), [])
+
+
+def get_index_by_name(session: Session, table_name: str, index_name: str) -> str | None:
+    """Get an index by name."""
+    connection = session.connection()
+    inspector = inspect(connection)
+    indexes = inspector.get_indexes(table_name)
+    return next(
+        (
+            possible_index["name"]
+            for possible_index in indexes
+            if possible_index["name"]
+            and (
+                possible_index["name"] == index_name
+                or possible_index["name"].endswith(f"_{index_name}")
+            )
+        ),
+        None,
+    )

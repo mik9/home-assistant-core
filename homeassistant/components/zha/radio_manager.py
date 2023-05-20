@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from contextlib import suppress
 import copy
 import logging
 import os
@@ -37,6 +38,12 @@ AUTOPROBE_RADIOS = (
     RadioType.znp,
     RadioType.deconz,
     RadioType.zigate,
+)
+
+RECOMMENDED_RADIOS = (
+    RadioType.ezsp,
+    RadioType.znp,
+    RadioType.deconz,
 )
 
 CONNECT_DELAY_S = 1.0
@@ -322,11 +329,9 @@ class ZhaMultiPANMigrationHelper:
             # ZHA is using another radio, do nothing
             return False
 
-        try:
+        # OperationNotAllowed: ZHA is not running
+        with suppress(config_entries.OperationNotAllowed):
             await self._hass.config_entries.async_unload(self._config_entry.entry_id)
-        except config_entries.OperationNotAllowed:
-            # ZHA is not running
-            pass
 
         # Temporarily connect to the old radio to read its settings
         config_entry_data = self._config_entry.data
@@ -383,8 +388,6 @@ class ZhaMultiPANMigrationHelper:
         _LOGGER.debug("Restored backup after %s retries", retry)
 
         # Launch ZHA again
-        try:
+        # OperationNotAllowed: ZHA is not unloaded
+        with suppress(config_entries.OperationNotAllowed):
             await self._hass.config_entries.async_setup(self._config_entry.entry_id)
-        except config_entries.OperationNotAllowed:
-            # ZHA is not unloaded
-            pass

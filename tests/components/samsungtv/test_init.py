@@ -2,8 +2,9 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.media_player import DOMAIN, SUPPORT_TURN_ON
+from homeassistant.components.media_player import DOMAIN, MediaPlayerEntityFeature
 from homeassistant.components.samsungtv.const import (
     CONF_MANUFACTURER,
     CONF_ON_ACTION,
@@ -31,6 +32,7 @@ from homeassistant.const import (
     SERVICE_VOLUME_UP,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
 
 from . import setup_samsungtv_entry
@@ -77,7 +79,9 @@ REMOTE_CALL = {
 
 
 @pytest.mark.usefixtures("remotews", "remoteencws_failing", "rest_api")
-async def test_setup(hass: HomeAssistant) -> None:
+async def test_setup(
+    hass: HomeAssistant, issue_registry: ir.IssueRegistry, snapshot: SnapshotAssertion
+) -> None:
     """Test Samsung TV integration is setup."""
     await async_setup_component(hass, SAMSUNGTV_DOMAIN, MOCK_CONFIG)
     await hass.async_block_till_done()
@@ -87,13 +91,18 @@ async def test_setup(hass: HomeAssistant) -> None:
     assert state
     assert state.name == "fake_name"
     assert (
-        state.attributes[ATTR_SUPPORTED_FEATURES] == SUPPORT_SAMSUNGTV | SUPPORT_TURN_ON
+        state.attributes[ATTR_SUPPORTED_FEATURES]
+        == SUPPORT_SAMSUNGTV | MediaPlayerEntityFeature.TURN_ON
     )
 
     # test host and port
     assert await hass.services.async_call(
         DOMAIN, SERVICE_VOLUME_UP, {ATTR_ENTITY_ID: ENTITY_ID}, True
     )
+
+    # ensure deprecated_yaml issue is raised
+    issue = issue_registry.async_get_issue(SAMSUNGTV_DOMAIN, "deprecated_yaml")
+    assert issue == snapshot
 
 
 async def test_setup_from_yaml_without_port_device_offline(hass: HomeAssistant) -> None:

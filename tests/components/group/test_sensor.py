@@ -1,12 +1,12 @@
 """The tests for the Group Sensor platform."""
 from __future__ import annotations
 
+from math import prod
 import statistics
 from typing import Any
 from unittest.mock import patch
 
 import pytest
-from pytest import LogCaptureFixture
 
 from homeassistant import config as hass_config
 from homeassistant.components.group import DOMAIN as GROUP_DOMAIN
@@ -46,10 +46,11 @@ MEAN = statistics.mean(VALUES)
 MEDIAN = statistics.median(VALUES)
 RANGE = max(VALUES) - min(VALUES)
 SUM_VALUE = sum(VALUES)
+PRODUCT_VALUE = prod(VALUES)
 
 
 @pytest.mark.parametrize(
-    "sensor_type, result, attributes",
+    ("sensor_type", "result", "attributes"),
     [
         ("min", MIN_VALUE, {ATTR_MIN_ENTITY_ID: "sensor.test_3"}),
         ("max", MAX_VALUE, {ATTR_MAX_ENTITY_ID: "sensor.test_2"}),
@@ -58,6 +59,7 @@ SUM_VALUE = sum(VALUES)
         ("last", VALUES[2], {ATTR_LAST_ENTITY_ID: "sensor.test_3"}),
         ("range", RANGE, {}),
         ("sum", SUM_VALUE, {}),
+        ("product", PRODUCT_VALUE, {}),
     ],
 )
 async def test_sensors(
@@ -242,7 +244,7 @@ async def test_reload(hass: HomeAssistant) -> None:
 
 
 async def test_sensor_incorrect_state(
-    hass: HomeAssistant, caplog: LogCaptureFixture
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test the min sensor."""
     config = {
