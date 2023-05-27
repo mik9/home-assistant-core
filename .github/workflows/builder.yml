@@ -39,28 +39,28 @@ jobs:
         with:
           type: ${{ env.BUILD_TYPE }}
 
-      - name: Verify version
-        uses: home-assistant/actions/helpers/verify-version@master
-        with:
-          ignore-dev: true
+      # - name: Verify version
+      #   uses: home-assistant/actions/helpers/verify-version@master
+      #   with:
+      #     ignore-dev: true
 
       - name: Generate meta info
         shell: bash
         run: |
           echo "${{ github.sha }};${{ github.ref }};${{ github.event_name }};${{ github.actor }}" > OFFICIAL_IMAGE
 
-      - name: Signing meta info file
-        uses: home-assistant/actions/helpers/codenotary@master
-        with:
-          source: file://${{ github.workspace }}/OFFICIAL_IMAGE
-          asset: OFFICIAL_IMAGE-${{ steps.version.outputs.version }}
-          token: ${{ secrets.CAS_TOKEN }}
+      # - name: Signing meta info file
+      #   uses: home-assistant/actions/helpers/codenotary@master
+      #   with:
+      #     source: file://${{ github.workspace }}/OFFICIAL_IMAGE
+      #     asset: OFFICIAL_IMAGE-${{ steps.version.outputs.version }}
+      #     token: ${{ secrets.CAS_TOKEN }}
 
   build_python:
     name: Build PyPi package
     needs: init
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'home-assistant' && needs.init.outputs.publish == 'true'
+    if: github.repository_owner == 'mik9' && needs.init.outputs.publish == 'true'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v3.5.2
@@ -93,7 +93,7 @@ jobs:
 
   build_base:
     name: Build ${{ matrix.arch }} base core image
-    if: github.repository_owner == 'home-assistant'
+    if: github.repository_owner == 'mik9'
     needs: init
     runs-on: ubuntu-latest
     strategy:
@@ -170,10 +170,10 @@ jobs:
             python -m script.gen_requirements_all
           fi
 
-      - name: Download Translations
-        run: python3 -m script.translations download
-        env:
-          LOKALISE_TOKEN: ${{ secrets.LOKALISE_TOKEN }}
+      # - name: Download Translations
+      #   run: python3 -m script.translations download
+      #   env:
+      #     LOKALISE_TOKEN: ${{ secrets.LOKALISE_TOKEN }}
 
       - name: Write meta info file
         shell: bash
@@ -217,7 +217,7 @@ jobs:
 
   build_machine:
     name: Build ${{ matrix.machine }} machine core image
-    if: github.repository_owner == 'home-assistant'
+    if: github.repository_owner == 'mik9'
     needs: ["init", "build_base"]
     runs-on: ubuntu-latest
     strategy:
@@ -283,7 +283,7 @@ jobs:
 
   publish_ha:
     name: Publish version files
-    if: github.repository_owner == 'home-assistant'
+    if: github.repository_owner == 'mik9'
     needs: ["init", "build_machine"]
     runs-on: ubuntu-latest
     steps:
@@ -316,7 +316,7 @@ jobs:
 
   publish_container:
     name: Publish meta container for ${{ matrix.registry }}
-    if: github.repository_owner == 'home-assistant'
+    if: github.repository_owner == 'mik9'
     needs: ["init", "build_base"]
     runs-on: ubuntu-latest
     strategy:
