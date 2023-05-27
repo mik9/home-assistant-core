@@ -3,10 +3,6 @@ name: Build images
 # yamllint disable-line rule:truthy
 on:
   workflow_dispatch:
-  release:
-    types: ["published"]
-  schedule:
-    - cron: "0 2 * * *"
 
 env:
   BUILD_TYPE: core
@@ -15,7 +11,7 @@ env:
 jobs:
   init:
     name: Initialize build
-    if: github.repository_owner == 'home-assistant'
+    if: github.repository_owner == 'mik9'
     runs-on: ubuntu-latest
     outputs:
       architectures: ${{ steps.info.outputs.architectures }}
