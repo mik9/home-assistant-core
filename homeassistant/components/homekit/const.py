@@ -120,6 +120,10 @@ TYPE_SPRINKLER = "sprinkler"
 TYPE_SWITCH = "switch"
 TYPE_VALVE = "valve"
 
+# #### Fan Types ####
+TYPE_FAN = "fan"
+TYPE_PURIFIER = "purifier"
+
 # #### Services ####
 SERV_ACCESSORY_INFO = "AccessoryInformation"
 SERV_AIR_QUALITY_SENSOR = "AirQualitySensor"

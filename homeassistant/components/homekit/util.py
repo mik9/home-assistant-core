@@ -97,8 +97,10 @@ from .const import (
     HOMEKIT_PAIRING_QR,
     HOMEKIT_PAIRING_QR_SECRET,
     MAX_NAME_LENGTH,
+    TYPE_FAN,
     TYPE_FAUCET,
     TYPE_OUTLET,
+    TYPE_PURIFIER,
     TYPE_SHOWER,
     TYPE_SPRINKLER,
     TYPE_SWITCH,
@@ -185,6 +187,15 @@ SENSOR_SCHEMA = BASIC_INFO_SCHEMA.extend(
 
 FAN_SCHEMA = BASIC_INFO_SCHEMA.extend(
     {
+        vol.Optional(CONF_TYPE, default=TYPE_FAN): vol.All(
+            cv.string,
+            vol.In(
+                (
+                    TYPE_FAN,
+                    TYPE_PURIFIER,
+                )
+            ),
+        ),
         vol.Optional(CONF_PURIFIER_LOCK_PHYSICAL_CONTROLS): cv.entity_domain(switch.DOMAIN),
         vol.Optional(CONF_PURIFIER_FILTER_LIFE_LEVEL): cv.entity_domain(sensor.DOMAIN),
         vol.Optional(CONF_PURIFIER_MOTOR_SPEED): cv.entity_domain(sensor.DOMAIN),

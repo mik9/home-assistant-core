@@ -84,6 +84,8 @@ from .const import (
     TYPE_SPRINKLER,
     TYPE_SWITCH,
     TYPE_VALVE,
+    TYPE_FAN,
+    TYPE_PURIFIER,
 )
 from .iidmanager import AccessoryIIDStorage
 from .util import (
@@ -104,6 +106,10 @@ SWITCH_TYPES = {
     TYPE_SPRINKLER: "Valve",
     TYPE_SWITCH: "Switch",
     TYPE_VALVE: "Valve",
+}
+FAN_TYPES = {
+    TYPE_FAN: "Fan",
+    TYPE_PURIFIER: "AirPurifier"
 }
 TYPES: Registry[str, type[HomeAccessory]] = Registry()
 
@@ -164,10 +170,8 @@ def get_accessory(  # noqa: C901
             # and CoverEntityFeature.CLOSE
             a_type = "WindowCovering"
     elif state.domain == "fan":
-        if "purifier" in state.entity_id:
-            a_type = "AirPurifier"
-        else:
-            a_type = "Fan"
+        fan_type = config.get(CONF_TYPE, TYPE_FAN)
+        a_type = FAN_TYPES[fan_type]
 
     elif state.domain == "humidifier":
         a_type = "HumidifierDehumidifier"
