@@ -5,13 +5,11 @@ import asyncio
 from collections.abc import Callable
 from datetime import timedelta
 from enum import Enum
-from functools import cached_property
 import logging
 import random
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
-from typing_extensions import Self
 from zigpy import types
 import zigpy.device
 import zigpy.exceptions
@@ -23,6 +21,7 @@ from zigpy.zcl.clusters.general import Groups, Identify
 from zigpy.zcl.foundation import Status as ZclStatus, ZCLCommandDef
 import zigpy.zdo.types as zdo_types
 
+from homeassistant.backports.functools import cached_property
 from homeassistant.const import ATTR_COMMAND, ATTR_DEVICE_ID, ATTR_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -92,6 +91,16 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 _UPDATE_ALIVE_INTERVAL = (60, 90)
 _CHECKIN_GRACE_PERIODS = 2
+
+
+def get_device_automation_triggers(
+    device: zigpy.device.Device,
+) -> dict[tuple[str, str], dict[str, str]]:
+    """Get the supported device automation triggers for a zigpy device."""
+    return {
+        ("device_offline", "device_offline"): {"device_event_type": "device_offline"},
+        **getattr(device, "device_automation_triggers", {}),
+    }
 
 
 class DeviceStatus(Enum):
@@ -312,16 +321,7 @@ class ZHADevice(LogMixin):
     @cached_property
     def device_automation_triggers(self) -> dict[tuple[str, str], dict[str, str]]:
         """Return the device automation triggers for this device."""
-        triggers = {
-            ("device_offline", "device_offline"): {
-                "device_event_type": "device_offline"
-            }
-        }
-
-        if hasattr(self._zigpy_device, "device_automation_triggers"):
-            triggers.update(self._zigpy_device.device_automation_triggers)
-
-        return triggers
+        return get_device_automation_triggers(self._zigpy_device)
 
     @property
     def available_signal(self) -> str:

@@ -5,6 +5,7 @@ import asyncio
 from collections.abc import Mapping
 from datetime import timedelta
 import json
+from typing import Any, cast
 
 import voluptuous as vol
 
@@ -14,11 +15,13 @@ from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     PLATFORM_SCHEMA,
     STATE_CLASSES_SCHEMA,
-    SensorEntity,
+    SensorDeviceClass,
 )
+from homeassistant.components.sensor.helpers import async_parse_date_datetime
 from homeassistant.const import (
     CONF_COMMAND,
     CONF_DEVICE_CLASS,
+    CONF_ICON,
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_UNIQUE_ID,
@@ -32,7 +35,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
 from homeassistant.helpers.template import Template
+from homeassistant.helpers.trigger_template_entity import (
+    CONF_AVAILABILITY,
+    CONF_PICTURE,
+    ManualTriggerSensorEntity,
+)
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.util import dt as dt_util
 
 from .const import CONF_COMMAND_TIMEOUT, DEFAULT_TIMEOUT, DOMAIN, LOGGER
 from .utils import check_output_or_log
@@ -40,6 +49,16 @@ from .utils import check_output_or_log
 CONF_JSON_ATTRIBUTES = "json_attributes"
 
 DEFAULT_NAME = "Command Sensor"
+
+TRIGGER_ENTITY_OPTIONS = (
+    CONF_AVAILABILITY,
+    CONF_DEVICE_CLASS,
+    CONF_ICON,
+    CONF_PICTURE,
+    CONF_UNIQUE_ID,
+    CONF_STATE_CLASS,
+    CONF_UNIT_OF_MEASUREMENT,
+)
 
 SCAN_INTERVAL = timedelta(seconds=60)
 
@@ -70,7 +89,7 @@ async def async_setup_platform(
             hass,
             DOMAIN,
             "deprecated_yaml_sensor",
-            breaks_in_ha_version="2023.8.0",
+            breaks_in_ha_version="2023.12.0",
             is_fixable=False,
             severity=IssueSeverity.WARNING,
             translation_key="deprecated_platform_yaml",
@@ -81,32 +100,34 @@ async def async_setup_platform(
 
     name: str = sensor_config[CONF_NAME]
     command: str = sensor_config[CONF_COMMAND]
-    unit: str | None = sensor_config.get(CONF_UNIT_OF_MEASUREMENT)
     value_template: Template | None = sensor_config.get(CONF_VALUE_TEMPLATE)
     command_timeout: int = sensor_config[CONF_COMMAND_TIMEOUT]
-    unique_id: str | None = sensor_config.get(CONF_UNIQUE_ID)
     if value_template is not None:
         value_template.hass = hass
     json_attributes: list[str] | None = sensor_config.get(CONF_JSON_ATTRIBUTES)
     scan_interval: timedelta = sensor_config.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL)
     data = CommandSensorData(hass, command, command_timeout)
 
+    trigger_entity_config = {CONF_NAME: Template(name, hass)}
+    for key in TRIGGER_ENTITY_OPTIONS:
+        if key not in sensor_config:
+            continue
+        trigger_entity_config[key] = sensor_config[key]
+
     async_add_entities(
         [
             CommandSensor(
                 data,
-                name,
-                unit,
+                trigger_entity_config,
                 value_template,
                 json_attributes,
-                unique_id,
                 scan_interval,
             )
         ]
     )
 
 
-class CommandSensor(SensorEntity):
+class CommandSensor(ManualTriggerSensorEntity):
     """Representation of a sensor that is using shell commands."""
 
     _attr_should_poll = False
@@ -114,24 +135,25 @@ class CommandSensor(SensorEntity):
     def __init__(
         self,
         data: CommandSensorData,
-        name: str,
-        unit_of_measurement: str | None,
+        config: ConfigType,
         value_template: Template | None,
         json_attributes: list[str] | None,
-        unique_id: str | None,
         scan_interval: timedelta,
     ) -> None:
         """Initialize the sensor."""
-        self._attr_name = name
+        super().__init__(self.hass, config)
         self.data = data
         self._attr_extra_state_attributes = {}
         self._json_attributes = json_attributes
         self._attr_native_value = None
         self._value_template = value_template
-        self._attr_native_unit_of_measurement = unit_of_measurement
-        self._attr_unique_id = unique_id
         self._scan_interval = scan_interval
         self._process_updates: asyncio.Lock | None = None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes."""
+        return cast(dict, self._attr_extra_state_attributes)
 
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
@@ -186,19 +208,37 @@ class CommandSensor(SensorEntity):
                 LOGGER.warning("Empty reply found when expecting JSON data")
             if self._value_template is None:
                 self._attr_native_value = None
+                self._process_manual_data(value)
                 return
 
-        if self._value_template is not None:
-            self._attr_native_value = (
-                self._value_template.async_render_with_possible_json_value(
-                    value,
-                    None,
-                )
+        self._attr_native_value = None
+        if self._value_template is not None and value is not None:
+            value = self._value_template.async_render_with_possible_json_value(
+                value,
+                None,
             )
-        else:
-            self._attr_native_value = value
 
+        if self.device_class not in {
+            SensorDeviceClass.DATE,
+            SensorDeviceClass.TIMESTAMP,
+        }:
+            self._attr_native_value = value
+            self._process_manual_data(value)
+            return
+
+        if value is not None:
+            self._attr_native_value = async_parse_date_datetime(
+                value, self.entity_id, self.device_class
+            )
+        self._process_manual_data(value)
         self.async_write_ha_state()
+
+    async def async_update(self) -> None:
+        """Update the entity.
+
+        Only used by the generic entity update service.
+        """
+        await self._update_entity_state(dt_util.now())
 
 
 class CommandSensorData:

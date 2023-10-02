@@ -4,9 +4,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 import logging
-from typing import Any, TypedDict
-
-from typing_extensions import NotRequired
+from typing import Any, NotRequired, TypedDict
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -274,12 +272,13 @@ class SupervisorIssues:
             data["suggestions"] = (
                 await self._client.get_suggestions_for_issue(data["uuid"])
             )[ATTR_SUGGESTIONS]
-            self.add_issue(Issue.from_dict(data))
         except HassioAPIError:
             _LOGGER.error(
                 "Could not get suggestions for supervisor issue %s, skipping it",
                 data["uuid"],
             )
+            return
+        self.add_issue(Issue.from_dict(data))
 
     def remove_issue(self, issue: Issue) -> None:
         """Remove an issue from the list. Delete a repair if necessary."""
@@ -305,7 +304,11 @@ class SupervisorIssues:
 
     async def update(self) -> None:
         """Update issues from Supervisor resolution center."""
-        data = await self._client.get_resolution_info()
+        try:
+            data = await self._client.get_resolution_info()
+        except HassioAPIError as err:
+            _LOGGER.error("Failed to update supervisor issues: %r", err)
+            return
         self.unhealthy_reasons = set(data[ATTR_UNHEALTHY])
         self.unsupported_reasons = set(data[ATTR_UNSUPPORTED])
 

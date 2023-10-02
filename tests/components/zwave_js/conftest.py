@@ -3,7 +3,7 @@ import asyncio
 import copy
 import io
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import DEFAULT, AsyncMock, patch
 
 import pytest
 from zwave_js_server.event import Event
@@ -365,6 +365,14 @@ def climate_adc_t3000_state_fixture():
     return json.loads(load_fixture("zwave_js/climate_adc_t3000_state.json"))
 
 
+@pytest.fixture(name="climate_airzone_aidoo_control_hvac_unit_state", scope="session")
+def climate_airzone_aidoo_control_hvac_unit_state_fixture():
+    """Load the climate Airzone Aidoo Control HVAC Unit state fixture data."""
+    return json.loads(
+        load_fixture("zwave_js/climate_airzone_aidoo_control_hvac_unit_state.json")
+    )
+
+
 @pytest.fixture(name="climate_danfoss_lc_13_state", scope="session")
 def climate_danfoss_lc_13_state_fixture():
     """Load Danfoss (LC-13) electronic radiator thermostat node state fixture data."""
@@ -431,6 +439,12 @@ def hs_fc200_state_fixture():
 def leviton_zw4sf_state_fixture():
     """Load the Leviton ZW4SF node state fixture data."""
     return json.loads(load_fixture("zwave_js/leviton_zw4sf_state.json"))
+
+
+@pytest.fixture(name="fan_honeywell_39358_state", scope="session")
+def fan_honeywell_39358_state_fixture():
+    """Load the fan node state fixture data."""
+    return json.loads(load_fixture("zwave_js/fan_honeywell_39358_state.json"))
 
 
 @pytest.fixture(name="gdc_zw062_state", scope="session")
@@ -674,6 +688,17 @@ def mock_client_fixture(
         client.version = VersionInfo.from_message(version_state)
         client.ws_server_url = "ws://test:3000/zjs"
 
+        async def async_send_command_side_effect(message, require_schema=None):
+            """Return the command response."""
+            if message["command"] == "node.has_device_config_changed":
+                return {"changed": False}
+            return DEFAULT
+
+        client.async_send_command.return_value = {
+            "result": {"success": True, "status": 255}
+        }
+        client.async_send_command.side_effect = async_send_command_side_effect
+
         yield client
 
 
@@ -820,6 +845,16 @@ def climate_adc_t3000_missing_fan_mode_states_fixture(client, climate_adc_t3000_
     return node
 
 
+@pytest.fixture(name="climate_airzone_aidoo_control_hvac_unit")
+def climate_airzone_aidoo_control_hvac_unit_fixture(
+    client, climate_airzone_aidoo_control_hvac_unit_state
+):
+    """Mock a climate Airzone Aidoo Control HVAC node."""
+    node = Node(client, copy.deepcopy(climate_airzone_aidoo_control_hvac_unit_state))
+    client.driver.controller.nodes[node.node_id] = node
+    return node
+
+
 @pytest.fixture(name="climate_danfoss_lc_13")
 def climate_danfoss_lc_13_fixture(client, climate_danfoss_lc_13_state):
     """Mock a climate radio danfoss LC-13 node."""
@@ -945,6 +980,14 @@ def hs_fc200_fixture(client, hs_fc200_state):
 def leviton_zw4sf_fixture(client, leviton_zw4sf_state):
     """Mock a fan node."""
     node = Node(client, copy.deepcopy(leviton_zw4sf_state))
+    client.driver.controller.nodes[node.node_id] = node
+    return node
+
+
+@pytest.fixture(name="fan_honeywell_39358")
+def fan_honeywell_39358_fixture(client, fan_honeywell_39358_state):
+    """Mock a fan node."""
+    node = Node(client, copy.deepcopy(fan_honeywell_39358_state))
     client.driver.controller.nodes[node.node_id] = node
     return node
 
