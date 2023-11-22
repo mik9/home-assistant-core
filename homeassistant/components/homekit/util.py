@@ -96,8 +96,6 @@ from .const import (
     FEATURE_PLAY_PAUSE,
     FEATURE_PLAY_STOP,
     FEATURE_TOGGLE_MUTE,
-    HOMEKIT_PAIRING_QR,
-    HOMEKIT_PAIRING_QR_SECRET,
     MAX_NAME_LENGTH,
     TYPE_FAN,
     TYPE_FAUCET,
@@ -112,6 +110,7 @@ from .const import (
     VIDEO_CODEC_H264_V4L2M2M,
     VIDEO_CODEC_LIBX264,
 )
+from .models import HomeKitEntryData
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -391,8 +390,10 @@ def async_show_setup_message(
     url.svg(buffer, scale=5, module_color="#000", background="#FFF")
     pairing_secret = secrets.token_hex(32)
 
-    hass.data[DOMAIN][entry_id][HOMEKIT_PAIRING_QR] = buffer.getvalue()
-    hass.data[DOMAIN][entry_id][HOMEKIT_PAIRING_QR_SECRET] = pairing_secret
+    entry_data: HomeKitEntryData = hass.data[DOMAIN][entry_id]
+
+    entry_data.pairing_qr = buffer.getvalue()
+    entry_data.pairing_qr_secret = pairing_secret
 
     message = (
         f"To set up {bridge_name} in the Home App, "
@@ -669,7 +670,8 @@ def state_needs_accessory_mode(state: State) -> bool:
 
     return (
         state.domain == MEDIA_PLAYER_DOMAIN
-        and state.attributes.get(ATTR_DEVICE_CLASS) == MediaPlayerDeviceClass.TV
+        and state.attributes.get(ATTR_DEVICE_CLASS)
+        in (MediaPlayerDeviceClass.TV, MediaPlayerDeviceClass.RECEIVER)
         or state.domain == REMOTE_DOMAIN
         and state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         & RemoteEntityFeature.ACTIVITY

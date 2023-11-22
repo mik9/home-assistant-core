@@ -24,6 +24,7 @@ from homeassistant.components import (
     prometheus,
     sensor,
     switch,
+    update,
 )
 from homeassistant.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
@@ -465,6 +466,12 @@ async def test_light(client, light_entities) -> None:
         'friendly_name="PC"} 70.58823529411765' in body
     )
 
+    assert (
+        'light_brightness_percent{domain="light",'
+        'entity="light.hallway",'
+        'friendly_name="Hallway"} 100.0' in body
+    )
+
 
 @pytest.mark.parametrize("namespace", [""])
 async def test_lock(client, lock_entities) -> None:
@@ -569,6 +576,23 @@ async def test_counter(client, counter_entities) -> None:
         'counter_value{domain="counter",'
         'entity="counter.counter",'
         'friendly_name="None"} 2.0' in body
+    )
+
+
+@pytest.mark.parametrize("namespace", [""])
+async def test_update(client, update_entities) -> None:
+    """Test prometheus metrics for update."""
+    body = await generate_latest_metrics(client)
+
+    assert (
+        'update_state{domain="update",'
+        'entity="update.firmware",'
+        'friendly_name="Firmware"} 1.0' in body
+    )
+    assert (
+        'update_state{domain="update",'
+        'entity="update.addon",'
+        'friendly_name="Addon"} 0.0' in body
     )
 
 
@@ -1474,6 +1498,19 @@ async def light_fixture(
     data["light_4"] = light_4
     data["light_4_attributes"] = light_4_attributes
 
+    light_5 = entity_registry.async_get_or_create(
+        domain=light.DOMAIN,
+        platform="test",
+        unique_id="light_5",
+        suggested_object_id="hallway",
+        original_name="Hallway",
+    )
+    # Light is on, but brightness is unset; expect metrics to report
+    # brightness of 100%.
+    light_5_attributes = {light.ATTR_BRIGHTNESS: None}
+    set_state_with_entry(hass, light_5, STATE_ON, light_5_attributes)
+    data["light_5"] = light_5
+    data["light_5_attributes"] = light_5_attributes
     await hass.async_block_till_done()
     return data
 
@@ -1586,6 +1623,36 @@ async def counter_fixture(
     )
     set_state_with_entry(hass, counter_1, 2)
     data["counter_1"] = counter_1
+
+    await hass.async_block_till_done()
+    return data
+
+
+@pytest.fixture(name="update_entities")
+async def update_fixture(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry
+) -> dict[str, er.RegistryEntry]:
+    """Simulate update entities."""
+    data = {}
+    update_1 = entity_registry.async_get_or_create(
+        domain=update.DOMAIN,
+        platform="test",
+        unique_id="update_1",
+        suggested_object_id="firmware",
+        original_name="Firmware",
+    )
+    set_state_with_entry(hass, update_1, STATE_ON)
+    data["update_1"] = update_1
+
+    update_2 = entity_registry.async_get_or_create(
+        domain=update.DOMAIN,
+        platform="test",
+        unique_id="update_2",
+        suggested_object_id="addon",
+        original_name="Addon",
+    )
+    set_state_with_entry(hass, update_2, STATE_OFF)
+    data["update_2"] = update_2
 
     await hass.async_block_till_done()
     return data

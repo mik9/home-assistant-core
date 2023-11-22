@@ -57,6 +57,7 @@ BOOST_INCLUSIVE = "boost_inclusive"
 AVAILABLE_FAN_MODES = {
     "quiet",
     "low",
+    "medium_low",
     "medium",
     "medium_high",
     "high",
@@ -188,6 +189,8 @@ class SensiboClimate(SensiboDeviceBaseEntity, ClimateEntity):
     """Representation of a Sensibo device."""
 
     _attr_name = None
+    _attr_precision = PRECISION_TENTHS
+    _attr_translation_key = "climate_device"
 
     def __init__(
         self, coordinator: SensiboDataUpdateCoordinator, device_id: str
@@ -201,8 +204,6 @@ class SensiboClimate(SensiboDeviceBaseEntity, ClimateEntity):
             else UnitOfTemperature.FAHRENHEIT
         )
         self._attr_supported_features = self.get_features()
-        self._attr_precision = PRECISION_TENTHS
-        self._attr_translation_key = "climate_device"
 
     def get_features(self) -> ClimateEntityFeature:
         """Get supported features."""
