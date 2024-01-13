@@ -146,7 +146,7 @@ afsapi==0.2.7
 agent-py==0.0.23
 
 # homeassistant.components.geo_json_events
-aio-geojson-generic-client==0.3
+aio-geojson-generic-client==0.4
 
 # homeassistant.components.geonetnz_quakes
 aio-geojson-geonetnz-quakes==0.15
@@ -194,7 +194,7 @@ aiobafi6==0.9.0
 aiobotocore==2.6.0
 
 # homeassistant.components.comelit
-aiocomelit==0.7.0
+aiocomelit==0.7.3
 
 # homeassistant.components.dhcp
 aiodiscover==1.6.0
@@ -233,7 +233,7 @@ aioguardian==2022.07.0
 aioharmony==0.2.10
 
 # homeassistant.components.homekit_controller
-aiohomekit==3.1.1
+aiohomekit==3.1.2
 
 # homeassistant.components.http
 aiohttp-fast-url-dispatcher==0.3.0
@@ -329,7 +329,7 @@ aioruuvigateway==0.1.0
 aiosenz==1.0.0
 
 # homeassistant.components.shelly
-aioshelly==7.0.0
+aioshelly==7.1.0
 
 # homeassistant.components.skybell
 aioskybell==22.7.0
@@ -341,7 +341,7 @@ aioslimproto==2.3.3
 aiosteamist==0.3.2
 
 # homeassistant.components.switcher_kis
-aioswitcher==3.3.0
+aioswitcher==3.4.1
 
 # homeassistant.components.syncthing
 aiosyncthing==0.5.1
@@ -466,7 +466,7 @@ bleak==0.21.1
 blebox-uniapi==2.2.0
 
 # homeassistant.components.blink
-blinkpy==0.22.4
+blinkpy==0.22.5
 
 # homeassistant.components.blue_current
 bluecurrent-api==1.0.6
@@ -478,7 +478,7 @@ bluemaestro-ble==0.2.3
 bluetooth-adapters==0.16.2
 
 # homeassistant.components.bluetooth
-bluetooth-auto-recovery==1.2.3
+bluetooth-auto-recovery==1.3.0
 
 # homeassistant.components.bluetooth
 # homeassistant.components.ld2410_ble
@@ -585,7 +585,7 @@ discovery30303==0.2.1
 dremel3dpy==2.1.1
 
 # homeassistant.components.drop_connect
-dropmqttapi==1.0.1
+dropmqttapi==1.0.2
 
 # homeassistant.components.dsmr
 dsmr-parser==1.3.1
@@ -803,7 +803,7 @@ ha-philipsjs==3.1.1
 habitipy==0.2.0
 
 # homeassistant.components.bluetooth
-habluetooth==2.0.1
+habluetooth==2.1.0
 
 # homeassistant.components.cloud
 hass-nabucasa==0.75.1
@@ -831,7 +831,7 @@ hole==0.8.0
 holidays==0.39
 
 # homeassistant.components.frontend
-home-assistant-frontend==20240103.3
+home-assistant-frontend==20240104.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2024.1.2
@@ -976,7 +976,7 @@ maxcube-api==0.4.3
 mbddns==0.1.2
 
 # homeassistant.components.minecraft_server
-mcstatus==11.0.0
+mcstatus==11.1.1
 
 # homeassistant.components.meater
 meater-python==0.0.8
@@ -1195,7 +1195,7 @@ pushover_complete==1.1.1
 pvo==2.1.1
 
 # homeassistant.components.aosmith
-py-aosmith==1.0.1
+py-aosmith==1.0.4
 
 # homeassistant.components.canary
 py-canary==0.5.3
@@ -1696,7 +1696,7 @@ python-smarttub==0.0.36
 python-songpal==0.16
 
 # homeassistant.components.tado
-python-tado==0.17.0
+python-tado==0.17.3
 
 # homeassistant.components.telegram_bot
 python-telegram-bot==13.1
@@ -1726,7 +1726,7 @@ pytrydan==0.4.0
 pyudev==0.23.2
 
 # homeassistant.components.unifiprotect
-pyunifiprotect==4.22.5
+pyunifiprotect==4.23.2
 
 # homeassistant.components.uptimerobot
 pyuptimerobot==22.2.0
@@ -1798,7 +1798,7 @@ renault-api==0.2.1
 renson-endura-delta==1.7.1
 
 # homeassistant.components.reolink
-reolink-aio==0.8.5
+reolink-aio==0.8.6
 
 # homeassistant.components.rflink
 rflink==0.0.65
@@ -2189,7 +2189,7 @@ zigpy-znp==0.12.1
 zigpy==0.60.4
 
 # homeassistant.components.zwave_js
-zwave-js-server-python==0.55.2
+zwave-js-server-python==0.55.3
 
 # homeassistant.components.zwave_me
 zwave-me-ws==0.4.3
