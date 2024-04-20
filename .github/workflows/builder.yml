@@ -3,15 +3,20 @@ name: Build images
 # yamllint disable-line rule:truthy
 on:
   workflow_dispatch:
+  release:
+    types: ["published"]
+  schedule:
+    - cron: "0 2 * * *"
 
 env:
   BUILD_TYPE: core
-  DEFAULT_PYTHON: "3.11"
+  DEFAULT_PYTHON: "3.12"
+  PIP_TIMEOUT: 60
 
 jobs:
   init:
     name: Initialize build
-    if: github.repository_owner == 'mik9'
+    if: github.repository_owner == 'home-assistant'
     runs-on: ubuntu-latest
     outputs:
       architectures: ${{ steps.info.outputs.architectures }}
@@ -39,17 +44,17 @@ jobs:
         with:
           type: ${{ env.BUILD_TYPE }}
 
-      # - name: Verify version
-      #   uses: home-assistant/actions/helpers/verify-version@master
-      #   with:
-      #     ignore-dev: true
+      - name: Verify version
+        uses: home-assistant/actions/helpers/verify-version@master
+        with:
+          ignore-dev: true
 
   build_python:
     name: Build PyPi package
     environment: ${{ needs.init.outputs.channel }}
     needs: ["init", "build_base"]
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'mik9' && needs.init.outputs.publish == 'true'
+    if: github.repository_owner == 'home-assistant' && needs.init.outputs.publish == 'true'
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4.1.1
@@ -82,7 +87,7 @@ jobs:
 
   build_base:
     name: Build ${{ matrix.arch }} base core image
-    if: github.repository_owner == 'mik9'
+    if: github.repository_owner == 'home-assistant'
     needs: init
     runs-on: ubuntu-latest
     permissions:
@@ -98,7 +103,7 @@ jobs:
 
       - name: Download nightly wheels of frontend
         if: needs.init.outputs.channel == 'dev'
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3.0.0
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           repo: home-assistant/frontend
@@ -109,7 +114,7 @@ jobs:
 
       - name: Download nightly wheels of intents
         if: needs.init.outputs.channel == 'dev'
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3.0.0
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
           repo: home-assistant/intents-package
@@ -175,10 +180,19 @@ jobs:
           sed -i "s|pyezviz|# pyezviz|g" requirements_all.txt
           sed -i "s|pykrakenapi|# pykrakenapi|g" requirements_all.txt
 
-      # - name: Download Translations
-      #   run: python3 -m script.translations download
-      #   env:
-      #     LOKALISE_TOKEN: ${{ secrets.LOKALISE_TOKEN }}
+      - name: Adjustments for 64-bit
+        if: matrix.arch == 'amd64' || matrix.arch == 'aarch64'
+        run: |
+          # Some speedups are only available on 64-bit, and since
+          # we build 32bit images on 64bit hosts, we only enable
+          # the speed ups on 64bit since the wheels for 32bit
+          # are not available.
+          sed -i "s|aiohttp-zlib-ng|aiohttp-zlib-ng\[isal\]|g" requirements_all.txt
+
+      - name: Download Translations
+        run: python3 -m script.translations download
+        env:
+          LOKALISE_TOKEN: ${{ secrets.LOKALISE_TOKEN }}
 
       - name: Write meta info file
         shell: bash
@@ -193,7 +207,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build base image
-        uses: home-assistant/builder@2023.12.0
+        uses: home-assistant/builder@2024.01.0
         with:
           args: |
             $BUILD_ARGS \
@@ -215,7 +229,7 @@ jobs:
 
   build_machine:
     name: Build ${{ matrix.machine }} machine core image
-    if: github.repository_owner == 'mik9'
+    if: github.repository_owner == 'home-assistant'
     needs: ["init", "build_base"]
     runs-on: ubuntu-latest
     permissions:
@@ -270,7 +284,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build base image
-        uses: home-assistant/builder@2023.12.0
+        uses: home-assistant/builder@2024.01.0
         with:
           args: |
             $BUILD_ARGS \
@@ -281,7 +295,7 @@ jobs:
   publish_ha:
     name: Publish version files
     environment: ${{ needs.init.outputs.channel }}
-    if: github.repository_owner == 'mik9'
+    if: github.repository_owner == 'home-assistant'
     needs: ["init", "build_machine"]
     runs-on: ubuntu-latest
     steps:
@@ -315,7 +329,7 @@ jobs:
   publish_container:
     name: Publish meta container for ${{ matrix.registry }}
     environment: ${{ needs.init.outputs.channel }}
-    if: github.repository_owner == 'mik9'
+    if: github.repository_owner == 'home-assistant'
     needs: ["init", "build_base"]
     runs-on: ubuntu-latest
     permissions:
