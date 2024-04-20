@@ -45,6 +45,7 @@ INFRARED_MODES = [
     {"id": IRLEDMode.AUTO.value, "name": "Auto"},
     {"id": IRLEDMode.ON.value, "name": "Always Enable"},
     {"id": IRLEDMode.AUTO_NO_LED.value, "name": "Auto (Filter Only, no LED's)"},
+    {"id": IRLEDMode.CUSTOM.value, "name": "Auto (Custom Lux)"},
     {"id": IRLEDMode.OFF.value, "name": "Always Disable"},
 ]
 
@@ -306,7 +307,8 @@ async def async_setup_entry(
     """Set up number entities for UniFi Protect integration."""
     data: ProtectData = hass.data[DOMAIN][entry.entry_id]
 
-    async def _add_new_device(device: ProtectAdoptableDeviceModel) -> None:
+    @callback
+    def _add_new_device(device: ProtectAdoptableDeviceModel) -> None:
         entities = async_all_device_entities(
             data,
             ProtectSelects,
