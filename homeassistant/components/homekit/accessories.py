@@ -45,16 +45,15 @@ from homeassistant.core import (
     CALLBACK_TYPE,
     Context,
     Event,
+    EventStateChangedData,
+    HassJobType,
     HomeAssistant,
     State,
     callback as ha_callback,
     split_entity_id,
 )
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import (
-    EventStateChangedData,
-    async_track_state_change_event,
-)
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util.decorator import Registry
 
 from .const import (
@@ -447,7 +446,10 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
         self._update_available_from_state(state)
         self._subscriptions.append(
             async_track_state_change_event(
-                self.hass, [self.entity_id], self.async_update_event_state_callback
+                self.hass,
+                [self.entity_id],
+                self.async_update_event_state_callback,
+                job_type=HassJobType.Callback,
             )
         )
 
@@ -467,6 +469,7 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
                     self.hass,
                     [self.linked_battery_sensor],
                     self.async_update_linked_battery_callback,
+                    job_type=HassJobType.Callback,
                 )
             )
         elif state is not None:
@@ -479,6 +482,7 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
                     self.hass,
                     [self.linked_battery_charging_sensor],
                     self.async_update_linked_battery_charging_callback,
+                    job_type=HassJobType.Callback,
                 )
             )
         elif battery_charging_state is None and state is not None:
