@@ -6,14 +6,14 @@ from datetime import timedelta
 import logging
 
 from aiohttp.client_exceptions import ServerDisconnectedError
-from pyunifiprotect.data import Bootstrap
-from pyunifiprotect.data.types import FirmwareReleaseChannel
-from pyunifiprotect.exceptions import ClientError, NotAuthorized
+from uiprotect.data import Bootstrap
+from uiprotect.data.types import FirmwareReleaseChannel
+from uiprotect.exceptions import ClientError, NotAuthorized
 
-# Import the test_util.anonymize module from the pyunifiprotect package
+# Import the test_util.anonymize module from the uiprotect package
 # in __init__ to ensure it gets imported in the executor since the
 # diagnostics module will not be imported in the executor.
-from pyunifiprotect.test_util.anonymize import anonymize_data  # noqa: F401
+from uiprotect.test_util.anonymize import anonymize_data  # noqa: F401
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
@@ -53,6 +53,10 @@ _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+EARLY_ACCESS_URL = (
+    "https://www.home-assistant.io/integrations/unifiprotect#software-support"
+)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -122,8 +126,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             DOMAIN,
             "ea_channel_warning",
             is_fixable=True,
-            is_persistent=True,
-            learn_more_url="https://www.home-assistant.io/integrations/unifiprotect#about-unifi-early-access",
+            is_persistent=False,
+            learn_more_url=EARLY_ACCESS_URL,
             severity=IssueSeverity.WARNING,
             translation_key="ea_channel_warning",
             translation_placeholders={"version": str(nvr_info.version)},

@@ -8,8 +8,8 @@ from functools import partial
 import logging
 from typing import Any, cast
 
-from pyunifiprotect import ProtectApiClient
-from pyunifiprotect.data import (
+from uiprotect import ProtectApiClient
+from uiprotect.data import (
     NVR,
     Bootstrap,
     Camera,
@@ -20,8 +20,8 @@ from pyunifiprotect.data import (
     ProtectAdoptableDeviceModel,
     WSSubscriptionMessage,
 )
-from pyunifiprotect.exceptions import ClientError, NotAuthorized
-from pyunifiprotect.utils import log_event
+from uiprotect.exceptions import ClientError, NotAuthorized
+from uiprotect.utils import log_event
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
@@ -43,7 +43,7 @@ from .const import (
 from .utils import async_dispatch_id as _ufpd, async_get_devices_by_type
 
 _LOGGER = logging.getLogger(__name__)
-ProtectDeviceType = ProtectAdoptableDeviceModel | NVR
+type ProtectDeviceType = ProtectAdoptableDeviceModel | NVR
 
 
 @callback
@@ -226,7 +226,7 @@ class ProtectData:
                 self._async_update_device(obj, message.changed_data)
 
         # trigger updates for camera that the event references
-        elif isinstance(obj, Event):  # type: ignore[unreachable]
+        elif isinstance(obj, Event):
             if _LOGGER.isEnabledFor(logging.DEBUG):
                 log_event(obj)
             if obj.type is EventType.DEVICE_ADOPTED:

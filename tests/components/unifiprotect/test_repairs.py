@@ -6,7 +6,7 @@ from copy import copy, deepcopy
 from http import HTTPStatus
 from unittest.mock import AsyncMock, Mock
 
-from pyunifiprotect.data import Camera, CloudAccount, ModelType, Version
+from uiprotect.data import Camera, CloudAccount, ModelType, Version
 
 from homeassistant.components.repairs.issue_handler import (
     async_process_repairs_platforms,
@@ -61,7 +61,7 @@ async def test_ea_warning_ignore(
 
     flow_id = data["flow_id"]
     assert data["description_placeholders"] == {
-        "learn_more": "https://www.home-assistant.io/integrations/unifiprotect#about-unifi-early-access",
+        "learn_more": "https://www.home-assistant.io/integrations/unifiprotect#software-support",
         "version": str(version),
     }
     assert data["step_id"] == "start"
@@ -73,7 +73,7 @@ async def test_ea_warning_ignore(
 
     flow_id = data["flow_id"]
     assert data["description_placeholders"] == {
-        "learn_more": "https://www.home-assistant.io/integrations/unifiprotect#about-unifi-early-access",
+        "learn_more": "https://www.home-assistant.io/integrations/unifiprotect#software-support",
         "version": str(version),
     }
     assert data["step_id"] == "confirm"
@@ -123,7 +123,7 @@ async def test_ea_warning_fix(
 
     flow_id = data["flow_id"]
     assert data["description_placeholders"] == {
-        "learn_more": "https://www.home-assistant.io/integrations/unifiprotect#about-unifi-early-access",
+        "learn_more": "https://www.home-assistant.io/integrations/unifiprotect#software-support",
         "version": str(version),
     }
     assert data["step_id"] == "start"

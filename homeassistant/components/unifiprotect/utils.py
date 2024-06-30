@@ -10,8 +10,8 @@ import socket
 from typing import Any
 
 from aiohttp import CookieJar
-from pyunifiprotect import ProtectApiClient
-from pyunifiprotect.data import (
+from uiprotect import ProtectApiClient
+from uiprotect.data import (
     Bootstrap,
     CameraChannel,
     Light,
@@ -89,10 +89,8 @@ def async_get_devices_by_type(
     bootstrap: Bootstrap, device_type: ModelType
 ) -> dict[str, ProtectAdoptableDeviceModel]:
     """Get devices by type."""
-
-    devices: dict[str, ProtectAdoptableDeviceModel] = getattr(
-        bootstrap, f"{device_type.value}s"
-    )
+    devices: dict[str, ProtectAdoptableDeviceModel]
+    devices = getattr(bootstrap, device_type.devices_key)
     return devices
 
 
