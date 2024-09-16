@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import mimetypes
-from typing import Any
+from typing import Any, cast
 
 from mastodon import Mastodon
 from mastodon.Mastodon import MastodonAPIError, MastodonUnauthorizedError
@@ -11,7 +11,7 @@ import voluptuous as vol
 
 from homeassistant.components.notify import (
     ATTR_DATA,
-    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_CLIENT_ID, CONF_CLIENT_SECRET
@@ -26,7 +26,7 @@ ATTR_TARGET = "target"
 ATTR_MEDIA_WARNING = "media_warning"
 ATTR_CONTENT_WARNING = "content_warning"
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_ACCESS_TOKEN): cv.string,
         vol.Required(CONF_CLIENT_ID): cv.string,
@@ -71,11 +71,15 @@ class MastodonNotificationService(BaseNotificationService):
 
     def send_message(self, message: str = "", **kwargs: Any) -> None:
         """Toot a message, with media perhaps."""
+
+        target = None
+        if (target_list := kwargs.get(ATTR_TARGET)) is not None:
+            target = cast(list[str], target_list)[0]
+
         data = kwargs.get(ATTR_DATA)
 
         media = None
         mediadata = None
-        target = None
         sensitive = False
         content_warning = None
 
@@ -87,7 +91,6 @@ class MastodonNotificationService(BaseNotificationService):
                     return
                 mediadata = self._upload_media(media)
 
-            target = data.get(ATTR_TARGET)
             sensitive = data.get(ATTR_MEDIA_WARNING)
             content_warning = data.get(ATTR_CONTENT_WARNING)
 

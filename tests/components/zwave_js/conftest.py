@@ -472,6 +472,12 @@ def iblinds_v3_state_fixture():
     return json.loads(load_fixture("zwave_js/cover_iblinds_v3_state.json"))
 
 
+@pytest.fixture(name="zvidar_state", scope="package")
+def zvidar_state_fixture():
+    """Load the ZVIDAR node state fixture data."""
+    return json.loads(load_fixture("zwave_js/cover_zvidar_state.json"))
+
+
 @pytest.fixture(name="qubino_shutter_state", scope="package")
 def qubino_shutter_state_fixture():
     """Load the Qubino Shutter node state fixture data."""
@@ -685,6 +691,12 @@ def central_scene_node_state_fixture():
 def light_device_class_is_null_state_fixture():
     """Load node with device class is None state fixture data."""
     return json.loads(load_fixture("zwave_js/light_device_class_is_null_state.json"))
+
+
+@pytest.fixture(name="basic_cc_sensor_state", scope="package")
+def basic_cc_sensor_state_fixture():
+    """Load node with Basic CC sensor fixture data."""
+    return json.loads(load_fixture("zwave_js/basic_cc_sensor_state.json"))
 
 
 # model fixtures
@@ -1075,6 +1087,14 @@ def iblinds_v3_cover_fixture(client, iblinds_v3_state):
     return node
 
 
+@pytest.fixture(name="zvidar")
+def zvidar_cover_fixture(client, zvidar_state):
+    """Mock a ZVIDAR window cover node."""
+    node = Node(client, copy.deepcopy(zvidar_state))
+    client.driver.controller.nodes[node.node_id] = node
+    return node
+
+
 @pytest.fixture(name="qubino_shutter")
 def qubino_shutter_cover_fixture(client, qubino_shutter_state):
     """Mock a Qubino flush shutter node."""
@@ -1353,5 +1373,13 @@ def central_scene_node_fixture(client, central_scene_node_state):
 def light_device_class_is_null_fixture(client, light_device_class_is_null_state):
     """Mock a node when device class is null."""
     node = Node(client, copy.deepcopy(light_device_class_is_null_state))
+    client.driver.controller.nodes[node.node_id] = node
+    return node
+
+
+@pytest.fixture(name="basic_cc_sensor")
+def basic_cc_sensor_fixture(client, basic_cc_sensor_state):
+    """Mock a node with a Basic CC."""
+    node = Node(client, copy.deepcopy(basic_cc_sensor_state))
     client.driver.controller.nodes[node.node_id] = node
     return node

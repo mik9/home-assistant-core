@@ -251,7 +251,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             mqtt_data.client.async_restore_tracked_subscriptions(
                 mqtt_data.subscriptions_to_restore
             )
-            mqtt_data.subscriptions_to_restore = []
+            mqtt_data.subscriptions_to_restore = set()
         mqtt_data.reload_dispatchers.append(
             entry.add_update_listener(_async_config_entry_updated)
         )
@@ -535,8 +535,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     registry_hooks = mqtt_data.discovery_registry_hooks
     while registry_hooks:
         registry_hooks.popitem()[1]()
-    # Wait for all ACKs and stop the loop
-    await mqtt_client.async_disconnect()
+    # Wait for all ACKs, stop the loop and disconnect the client
+    await mqtt_client.async_disconnect(disconnect_paho_client=True)
 
     # Cleanup MQTT client availability
     hass.data.pop(DATA_MQTT_AVAILABLE, None)
