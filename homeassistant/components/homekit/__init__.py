@@ -1159,9 +1159,9 @@ class HomeKit:
             )
 
         if state.entity_id.startswith(f"{SENSOR_DOMAIN}."):
-            current_sensor_entity_id = device_lookup.get(
+            current_sensor_entity_id = lookup.get(
                 (SENSOR_DOMAIN, SensorDeviceClass.PM10)
-            ) or device_lookup.get((SENSOR_DOMAIN, SensorDeviceClass.PM25))
+            ) or lookup.get((SENSOR_DOMAIN, SensorDeviceClass.PM25))
 
             if current_sensor_entity_id:
                 self._config.setdefault(state.entity_id, {}).setdefault(
